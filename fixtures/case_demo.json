@@ -17,7 +17,7 @@
         {"name": "owner_name", "value": "Sushila D.", "confidence": 0.81, "status": "read",
          "source": {"doc_id": "record_page_1947", "page": 1, "quote": "मालिक — Sushila D.", "crop_path": null}},
         {"name": "plot_area", "value": "2 acre 13 gunta", "confidence": 0.55, "status": "read",
-         "source": {"doc_id": "record_page_1947", "page": 1, "quote": "(overwritten, seal partially covering)", "crop_path": "fixtures/crops/plot_area.png"}}
+         "source": {"doc_id": "record_page_1947", "page": 1, "quote": "क्षेत्रफल cell — tehsil seal covering the figure", "crop_path": "crops/plot_area.png"}}
       ],
       "unknown": false,
       "raw_excerpt": "Handwritten record-of-rights page, multiple hands, one plot number overwritten, seal over area column."

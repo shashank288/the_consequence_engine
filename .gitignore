@@ -6,6 +6,8 @@ cases.json
 fixtures/raw/
 fixtures/private/
 web/crops/
+# ...except the demo refusal crop: the Delight moment must work from a fresh clone
+!web/crops/plot_area.png
 *.zip
 .venv/
 venv/

@@ -180,6 +180,9 @@ def main():
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--clean", action="store_true", help="no degradation (control)")
     ap.add_argument("--template", action="store_true", help="blank ruled form to handwrite")
+    ap.add_argument("--emit-crop", metavar="PATH",
+                    help="also write the seal-occluded area cell as a field crop "
+                         "(this is the escalation-queue image the refusal routes to)")
     a = ap.parse_args()
 
     rng = random.Random(a.seed)
@@ -192,6 +195,17 @@ def main():
         img = _stamp(img, rng)
     if not (a.clean or a.template):
         img = _fold_fade_bleed(img, rng)
+        # crop the क्षेत्रफल (area) cells the stamp sits over, BEFORE the capture
+        # resize, so the escalation view gets a legibly-sized field image.
+        if a.emit_crop:
+            import pathlib as _pl
+            box = (COLS[4] - 40, 330, COLS[5] + 20, 640)   # area col, rows 1-3
+            crop = img.crop(box).rotate(rng.uniform(-1.5, 1.5), resample=Image.BICUBIC,
+                                        expand=True, fillcolor=(210, 198, 172))
+            cp = _pl.Path(a.emit_crop)
+            cp.parent.mkdir(parents=True, exist_ok=True)
+            crop.save(cp)
+            print(f"wrote crop {cp}  ({crop.size[0]}x{crop.size[1]})")
         img = _capture(img, rng)
 
     import pathlib
