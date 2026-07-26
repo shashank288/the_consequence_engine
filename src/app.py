@@ -19,6 +19,8 @@ from .case_store import (CorrectionTargetNotFound, apply_correction, case_meta,
                          correction_targets, list_cases, load_case, log_correction,
                          reset_case, save_case)
 from .contracts import Case
+from .extraction.pipeline import extract_drafts, presence_facts
+from .sarvam_client import SarvamUnavailable
 from .sequencer.core import build_plan
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -44,8 +46,44 @@ def create_from_fixture(name: str):
 
 @app.post("/api/case")
 async def create_from_uploads(files: list[UploadFile]):
-    # feat/extraction owns this: Doc-Intelligence job -> ObligationDrafts -> plan
-    raise HTTPException(501, "extraction pipeline lands via feat/extraction; use fixture mode")
+    """Photographs -> Doc-Intelligence -> drafts -> plan. The real golden path.
+
+    Uploads are kept (not tempfile'd away) under fixtures/raw/uploads/<case_id>/:
+    feat/register needs the original pixels to crop a refused field for the
+    escalation view, and that happens after this request has returned.
+
+    If Sarvam cannot be reached we return 503 with the reason. We do NOT quietly
+    fall back to a canned reading — a demo that shows fixture data while
+    implying it came off the wire is the one failure mode this product cannot
+    afford. The operator's fallback is the explicit fixture endpoint.
+    """
+    if not files:
+        raise HTTPException(422, "no files uploaded")
+
+    case_id = f"case-{uuid.uuid4().hex[:8]}"
+    upload_dir = ROOT / "fixtures" / "raw" / "uploads" / case_id
+    upload_dir.mkdir(parents=True, exist_ok=True)
+    paths = []
+    for f in files:
+        name = pathlib.Path(f.filename or "page.png").name
+        dest = upload_dir / name
+        dest.write_bytes(await f.read())
+        paths.append(str(dest))
+
+    try:
+        drafts = extract_drafts(paths)
+    except SarvamUnavailable as exc:
+        raise HTTPException(503, str(exc)) from exc
+
+    case = Case(id=case_id, drafts=drafts,
+                # A document whose presence IS the fact (a death certificate)
+                # satisfies the requirement rather than becoming a chore, and
+                # shows on the plan as already done.
+                provided_facts=presence_facts(drafts),
+                done_keys=presence_facts(drafts))
+    case.plan = build_plan(case)
+    save_case(case)
+    return case.model_dump()
 
 
 @app.get("/api/cases")

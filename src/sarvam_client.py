@@ -1,37 +1,123 @@
 """Sarvam API client. Owned by feat/extraction (with feat/voice adding TTS/translate).
 
-VERIFIED (2026-07-26, docs.sarvam.ai): base URL, auth header, endpoint paths.
-NOT YET VERIFIED: exact request/response JSON shapes of the Document
-Intelligence job API — M0's first task is one real call with one real image.
+VERIFIED (2026-07-26, docs.sarvam.ai api-reference pages fetched today): base URL,
+auth header, and the FULL Document Intelligence job flow — paths, request bodies
+and response field names. See DOC_DIGITIZATION below.
 
-Doc Intelligence is an ASYNC JOB flow:
-  1. POST /api/document-intelligence/initialize        -> job id
-  2. POST /api/document-intelligence/get-upload-links  -> presigned upload URL(s)
-  3. PUT file to the upload URL
-  4. POST /api/document-intelligence/start
-  5. GET  /api/document-intelligence/status            (poll)
-  6. POST /api/document-intelligence/get-download-links -> result JSON
+⚠️ REPORT TO MAIN — `config.DOC_INTEL` paths are WRONG. The documented product is
+"doc-digitization", not "document-intelligence":
+
+    config.DOC_INTEL (stale)                      actual (docs.sarvam.ai)
+    /api/document-intelligence/initialize      -> POST /doc-digitization/job/v1
+    /api/document-intelligence/get-upload-links-> POST /doc-digitization/job/v1/upload-files
+    /api/document-intelligence/start           -> POST /doc-digitization/job/v1/{job_id}/start
+    /api/document-intelligence/status          -> GET  /doc-digitization/job/v1/{job_id}/status
+    /api/document-intelligence/get-download-links -> POST /doc-digitization/job/v1/{job_id}/download-files
+
+config.py belongs to main, so this file carries the corrected constants and main
+copies them across (IDEA_SCOPE.md §5). Nothing here imports DOC_INTEL any more.
+
+## The job flow, as documented
+  1. POST /doc-digitization/job/v1
+       body {"job_parameters": {"language": "hi-IN", "output_format": "md|html|json"}}
+       -> 202 {"job_id", "job_state", "job_parameters", "storage_container_type"}
+  2. POST /doc-digitization/job/v1/upload-files
+       body {"job_id": ..., "files": ["<one filename>"]}
+       -> {"upload_urls": {"<filename>": {"file_url": "<presigned>", "file_metadata": ...}},
+           "job_state", "storage_container_type"}
+     ⚠️ EXACTLY ONE file, and it must be **.pdf or .zip** — a bare .png/.jpg is
+     rejected. `_prepare_upload` wraps photos in a ZIP with no re-encoding.
+  3. PUT the bytes to file_url  (Azure presigned blobs also need x-ms-blob-type)
+  4. POST /doc-digitization/job/v1/{job_id}/start          body {}
+  5. GET  /doc-digitization/job/v1/{job_id}/status         poll until
+     job_state in {Completed, PartiallyCompleted, Failed}
+  6. POST /doc-digitization/job/v1/{job_id}/download-files body {}
+       -> {"download_urls": {"<filename>": {"file_url": ...}}}; GET each file_url.
+
+## What is STILL unverified (needs one real call — M0 could not run: no API key)
+  * the CONTENT of the downloaded result file (we ask for output_format=json and
+    handle md/html/text/json defensively in extraction/pipeline.py)
+  * whether any per-region CONFIDENCE is returned at all. Nothing in the docs
+    promises one. `extraction/confidence.py` therefore derives confidence
+    honestly from evidence and only prefers an API number if one shows up.
+  * the x-ms-blob-type header requirement on Azure presigned PUTs.
+Every raw response is cached to fixtures/raw/ so the first real call records the
+true shapes permanently.
 """
 from __future__ import annotations
 
+import io
+import json
+import os
+import pathlib
+import time
+import zipfile
+
 import httpx
 
-from .config import (AUTH_HEADER, CHAT_MODEL, DOC_INTEL, SARVAM_API_KEY,
-                     SARVAM_BASE_URL, TRANSLATE_MODEL, TTS_MODEL)
+from .config import (AUTH_HEADER, CHAT_MODEL, SARVAM_API_KEY, SARVAM_BASE_URL,
+                     TRANSLATE_MODEL, TTS_MODEL)
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+RAW_DIR = ROOT / "fixtures" / "raw"          # git-ignored response cache
+OFFLINE_SAMPLE = pathlib.Path(__file__).resolve().parent / "extraction" / "offline_sample.json"
+
+# Corrected, documentation-verified paths (see module docstring).
+DOC_DIGITIZATION = {
+    "create": "/doc-digitization/job/v1",
+    "upload_files": "/doc-digitization/job/v1/upload-files",
+    "start": "/doc-digitization/job/v1/{job_id}/start",
+    "status": "/doc-digitization/job/v1/{job_id}/status",
+    "download_files": "/doc-digitization/job/v1/{job_id}/download-files",
+}
+TERMINAL_STATES = {"Completed", "PartiallyCompleted", "Failed"}
+IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg"}
+
+POLL_INTERVAL_S = 3.0
+POLL_TIMEOUT_S = 240.0
+
+
+class SarvamUnavailable(RuntimeError):
+    """No key and no sanctioned replay — refuse rather than fake a reading."""
 
 
 def _headers() -> dict:
     if not SARVAM_API_KEY:
-        raise RuntimeError("SARVAM_API_KEY is not set (.env)")
+        raise SarvamUnavailable("SARVAM_API_KEY is not set (.env)")
     return {AUTH_HEADER: SARVAM_API_KEY}
 
 
+def offline_mode() -> bool:
+    """Read at call time, not import time — tests toggle it per case."""
+    return os.getenv("SARVAM_OFFLINE", "").strip() not in ("", "0", "false", "False")
+
+
 def chat(messages: list[dict], **kw) -> str:
-    """Sarvam-105B chat completion — used for obligation normalisation."""
+    """Sarvam-105B chat completion — used for obligation normalisation.
+    Verified: POST /v1/chat/completions, model ids sarvam-105b / sarvam-30b,
+    response_format supports text | json_object | json_schema."""
     r = httpx.post(f"{SARVAM_BASE_URL}/v1/chat/completions", headers=_headers(),
                    json={"model": CHAT_MODEL, "messages": messages, **kw}, timeout=120)
     r.raise_for_status()
     return r.json()["choices"][0]["message"]["content"]
+
+
+def chat_json(messages: list[dict], **kw) -> dict:
+    """Chat constrained to a JSON object. Raises ValueError if the model still
+    returns prose — the caller must NOT try to salvage a guess out of it."""
+    raw = chat(messages, response_format={"type": "json_object"}, **kw)
+    text = raw.strip()
+    if text.startswith("```"):                       # tolerate fenced output
+        text = text.strip("`")
+        text = text.split("\n", 1)[1] if "\n" in text else text
+        text = text.rsplit("```", 1)[0]
+    try:
+        parsed = json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"normalisation model did not return JSON: {raw[:400]}") from exc
+    if not isinstance(parsed, dict):
+        raise ValueError(f"normalisation model returned {type(parsed).__name__}, not an object")
+    return parsed
 
 
 def translate(text: str, target: str = "hi-IN") -> str:
@@ -52,8 +138,165 @@ def tts(text: str, lang: str = "hi-IN") -> bytes:
     return r.content
 
 
-def doc_intelligence_extract(image_path: str) -> dict:
-    """M0 CRITICAL: run one photographed page through the async job flow.
-    Implement + verify shapes here first; then feat/extraction builds
-    extraction/pipeline.py mapping the raw result -> ObligationDraft."""
-    raise NotImplementedError("M0: verify job-API shapes with one real call")
+# --- Document Intelligence ---------------------------------------------------
+
+def _cache_raw(name: str, payload) -> pathlib.Path:
+    """Every API response lands on disk. This is the demo's network fallback and
+    the record of the real shapes (fixtures/raw/ is git-ignored)."""
+    RAW_DIR.mkdir(parents=True, exist_ok=True)
+    path = RAW_DIR / name
+    body = payload if isinstance(payload, str) else json.dumps(payload, ensure_ascii=False, indent=2)
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def _prepare_upload(image_path: pathlib.Path) -> tuple[str, bytes, str]:
+    """-> (upload_filename, bytes, content_type). The API takes .pdf or .zip
+    only, so a photograph is zipped VERBATIM — no re-encode, no resample; the
+    degradation we are testing against must reach the model intact."""
+    data = image_path.read_bytes()
+    suffix = image_path.suffix.lower()
+    if suffix == ".pdf":
+        return image_path.name, data, "application/pdf"
+    if suffix == ".zip":
+        return image_path.name, data, "application/zip"
+    if suffix not in IMAGE_SUFFIXES:
+        raise ValueError(f"unsupported input {image_path.name}: need pdf, zip, png or jpg")
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED) as zf:
+        zf.writestr(image_path.name, data)
+    return f"{image_path.stem}.zip", buf.getvalue(), "application/zip"
+
+
+def _offline_payload(image_path: pathlib.Path) -> dict:
+    """Replay a cached response. Prefers a REAL cached response for this exact
+    image (fixtures/raw/<stem>.docintel.json, written by the first live call);
+    falls back to the committed hand-authored stand-in, which is labelled as
+    such in every field it produces."""
+    cached = RAW_DIR / f"{image_path.stem}.docintel.json"
+    if cached.exists():
+        payload = json.loads(cached.read_text(encoding="utf-8"))
+        payload["provenance"] = f"offline-replay:{cached.as_posix()}"
+        return payload
+
+    sample = json.loads(OFFLINE_SAMPLE.read_text(encoding="utf-8"))
+    docs = sample["documents"]
+    entry = docs.get(image_path.stem) or docs["default"]
+    return {
+        "provenance": f"offline-sample:{image_path.stem if image_path.stem in docs else 'default'}",
+        "offline": True,
+        "source_path": image_path.as_posix(),
+        "job_id": None,
+        "requested": {"language": "hi-IN", "output_format": "json"},
+        "documents": [entry],
+        "api_trace": {},
+    }
+
+
+def doc_intelligence_extract(image_path: str, *, language: str = "hi-IN",
+                             output_format: str = "json",
+                             poll_timeout_s: float = POLL_TIMEOUT_S) -> dict:
+    """One photographed page -> the raw Doc-Intelligence result, plus the trace.
+
+    Returns:
+        {"provenance": "sarvam-doc-digitization" | "offline-...",
+         "offline": bool, "source_path": str, "job_id": str|None,
+         "requested": {...},
+         "documents": [{"file_name": str, "content": <json|str>}],
+         "api_trace": {step: response_json}}          # the M0 shape record
+
+    Set SARVAM_OFFLINE=1 to replay the cached/sample response instead of calling
+    out. With no key and no SARVAM_OFFLINE we raise — a demo must never show a
+    canned reading while implying it came off the wire.
+    """
+    path = pathlib.Path(image_path)
+    if not path.exists():
+        raise FileNotFoundError(f"no such page: {path}")
+    if offline_mode():
+        return _offline_payload(path)
+    if not SARVAM_API_KEY:
+        raise SarvamUnavailable(
+            f"SARVAM_API_KEY is not set, so {path.name} cannot be read. "
+            "Set the key in .env, or set SARVAM_OFFLINE=1 to replay the cached "
+            "response (clearly marked as a replay).")
+
+    h = _headers()
+    trace: dict = {}
+    with httpx.Client(timeout=120) as client:
+        def _post(url: str, body: dict, step: str) -> dict:
+            r = client.post(url, headers=h, json=body)
+            r.raise_for_status()
+            data = r.json()
+            trace[step] = data
+            _cache_raw(f"{path.stem}.{step}.json", data)
+            return data
+
+        created = _post(f"{SARVAM_BASE_URL}{DOC_DIGITIZATION['create']}",
+                        {"job_parameters": {"language": language,
+                                            "output_format": output_format}},
+                        "create")
+        job_id = created["job_id"]
+
+        upload_name, blob, content_type = _prepare_upload(path)
+        links = _post(f"{SARVAM_BASE_URL}{DOC_DIGITIZATION['upload_files']}",
+                      {"job_id": job_id, "files": [upload_name]}, "upload_files")
+
+        entry = links["upload_urls"][upload_name]
+        put_headers = {"Content-Type": content_type}
+        if str(links.get("storage_container_type", "")).startswith("Azure"):
+            # UNVERIFIED: Azure presigned block-blob PUTs reject a body without
+            # this header. Harmless elsewhere; remove if the first real call 400s.
+            put_headers["x-ms-blob-type"] = "BlockBlob"
+        put = client.put(entry["file_url"], content=blob, headers=put_headers)
+        put.raise_for_status()
+        trace["upload_put"] = {"status": put.status_code, "bytes": len(blob),
+                               "filename": upload_name}
+
+        _post(f"{SARVAM_BASE_URL}{DOC_DIGITIZATION['start'].format(job_id=job_id)}",
+              {}, "start")
+
+        deadline = time.monotonic() + poll_timeout_s
+        status: dict = {}
+        while True:
+            r = client.get(
+                f"{SARVAM_BASE_URL}{DOC_DIGITIZATION['status'].format(job_id=job_id)}",
+                headers=h)
+            r.raise_for_status()
+            status = r.json()
+            if status.get("job_state") in TERMINAL_STATES:
+                break
+            if time.monotonic() > deadline:
+                _cache_raw(f"{path.stem}.status.timeout.json", status)
+                raise TimeoutError(
+                    f"job {job_id} still {status.get('job_state')} after "
+                    f"{poll_timeout_s:.0f}s — no reading, so nothing is guessed")
+            time.sleep(POLL_INTERVAL_S)
+        trace["status"] = status
+        _cache_raw(f"{path.stem}.status.json", status)
+        if status.get("job_state") == "Failed":
+            raise RuntimeError(
+                f"doc-digitization job {job_id} Failed: {status.get('error_message')}")
+
+        dl = _post(
+            f"{SARVAM_BASE_URL}{DOC_DIGITIZATION['download_files'].format(job_id=job_id)}",
+            {}, "download_files")
+
+        documents = []
+        for file_name, meta in (dl.get("download_urls") or {}).items():
+            got = client.get(meta["file_url"])
+            got.raise_for_status()
+            try:
+                content = got.json()
+            except ValueError:
+                content = got.text
+            _cache_raw(f"{path.stem}.result.{file_name}", content)
+            documents.append({"file_name": file_name, "content": content})
+
+    payload = {"provenance": "sarvam-doc-digitization", "offline": False,
+               "source_path": path.as_posix(), "job_id": job_id,
+               "requested": {"language": language, "output_format": output_format},
+               "documents": documents, "api_trace": trace}
+    # Stable name = what SARVAM_OFFLINE=1 replays next time. Free reruns, and a
+    # network-outage fallback on demo day.
+    _cache_raw(f"{path.stem}.docintel.json", payload)
+    return payload

@@ -1,0 +1,56 @@
+{
+  "_README": [
+    "NOT A REAL SARVAM RESPONSE. Hand-authored stand-in used only when",
+    "SARVAM_OFFLINE=1 and no real cached response exists for the page.",
+    "It exists because M0 could not make a live call: no SARVAM_API_KEY.",
+    "",
+    "Each entry models what Doc-Intelligence would plausibly return for one of",
+    "our demo pages, INCLUDING its failures: the tehsil stamp eats the area",
+    "column on rows 2-3 of the register page, and the struck-through owner",
+    "correction surfaces as two competing names. Deliberately carries NO",
+    "per-region confidence numbers, because nothing in the Sarvam docs promises",
+    "any -- extraction/confidence.py has to earn the number from evidence.",
+    "",
+    "The four entries use four DIFFERENT container shapes on purpose",
+    "(pages[].text, pages[].markdown, a bare string, a flat {text}) so the",
+    "normaliser in extraction/pipeline.py is exercised against every shape the",
+    "undocumented result file might actually take.",
+    "",
+    "The moment a key lands, one real call writes",
+    "fixtures/raw/<stem>.docintel.json and that takes precedence over this file."
+  ],
+  "documents": {
+    "register_page": {
+      "file_name": "register_page.json",
+      "content": {
+        "pages": [
+          {
+            "page_number": 1,
+            "text": "# ग्राम नमूना नं. ७/१२ — अधिकार अभिलेख\n\n| खाता | सर्वे नं. | मालिक का नाम | पिता का नाम | क्षेत्रफल | फेरफार |\n| --- | --- | --- | --- | --- | --- |\n| १२ | SN-142/2 | रामय्या स. | वेंकटय्या | २ एकड़ १३ गुंठा | म. १९९८/४७ |\n| १३ | SN-143 | सुशीला देवी सुशीला बाई | रामय्या | ०५ गुठा | म. २००४/११ |\n| १४ | SN-144/1 | लक्ष्मम्मा | नरसय्या | ३ एकइ ०० गु | म. १९८७/०९ |\n| १५ | SN-145 | गोविंद राव | शंकर राव | ०२ एकड़ ३० गुंठा | म. २०११/०३ |\n\n[तहसील कार्यालय]\n"
+          }
+        ]
+      }
+    },
+    "counter_slip": {
+      "file_name": "counter_slip.json",
+      "content": {
+        "pages": [
+          {
+            "page_number": 1,
+            "markdown": "तहसील कार्यालय — फेरफार (म्यूटेशन) आवेदन चेकलिस्ट\n\n1. मृत्यु प्रमाण पत्र की प्रति आवश्यक है / Death certificate of the recorded owner is required.\n2. वारसाहक्क प्रमाणपत्र अथवा नोटरीकृत शपथपत्र आवश्यक है / Heirship certificate or a notarised affidavit is required.\n3. Name of applicant must match the record-of-rights entry exactly.\n4. आवेदन दिनांक 14/08/2026 तक तलाठी कार्यालय में जमा करें / Submit the application to the Talathi office by 14/08/2026.\n5. प्रक्रिया अवधि: 25 दिन।\n"
+          }
+        ]
+      }
+    },
+    "bank_letter": {
+      "file_name": "bank_letter.txt",
+      "content": "Canara Bank, Khammam Branch\n\nSub: Succession claim on account of the late account holder.\n\nTo settle the claim, an attested copy of the updated record of rights is required along with the death certificate. Kindly complete the formalities by 01.09.2026.\n\nBranch Manager\n"
+    },
+    "default": {
+      "file_name": "unreadable.json",
+      "content": {
+        "text": "  ...  र ??  सेवा  —  रसीद  ???  \n  no. ____   dt. __/__/____\n"
+      }
+    }
+  }
+}
