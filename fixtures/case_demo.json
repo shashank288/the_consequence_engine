@@ -1,0 +1,100 @@
+{
+  "id": "demo-mutation-khammam",
+  "provided_facts": ["death_certificate"],
+  "done_keys": [],
+  "drafts": [
+    {
+      "id": "O1",
+      "doc_id": "record_page_1947",
+      "doc_type": "mutation_register_page",
+      "asked_what": "File record-correction application at tehsil so the owner name in the record of rights matches the heir's ID",
+      "asked_by": "Tehsil office, Khammam",
+      "due": null,
+      "amount": null,
+      "needs": [],
+      "provides": ["record_name_matches_id"],
+      "identity_fields": [
+        {"name": "owner_name", "value": "Sushila D.", "confidence": 0.81, "status": "read",
+         "source": {"doc_id": "record_page_1947", "page": 1, "quote": "मालिक — Sushila D.", "crop_path": null}},
+        {"name": "plot_area", "value": "2 acre 13 gunta", "confidence": 0.55, "status": "read",
+         "source": {"doc_id": "record_page_1947", "page": 1, "quote": "(overwritten, seal partially covering)", "crop_path": "fixtures/crops/plot_area.png"}}
+      ],
+      "unknown": false,
+      "raw_excerpt": "Handwritten record-of-rights page, multiple hands, one plot number overwritten, seal over area column."
+    },
+    {
+      "id": "O2",
+      "doc_id": "counter_slip",
+      "doc_type": "counter_slip",
+      "asked_what": "Submit mutation application to transfer the plot into the heir's name",
+      "asked_by": "Tehsil office, Khammam",
+      "due": {"name": "deadline", "value": "2026-08-14", "confidence": 0.92, "status": "read",
+              "source": {"doc_id": "counter_slip", "page": 1, "quote": "Aavedan 14/08/2026 tak jama karein"}},
+      "amount": null,
+      "needs": [
+        {"key": "record_name_matches_id",
+         "quote": "Name of applicant must match record-of-rights entry exactly",
+         "source": {"doc_id": "counter_slip", "page": 1, "quote": "Name of applicant must match record-of-rights entry exactly"}},
+        {"key": "death_certificate",
+         "quote": "Death certificate of recorded owner required",
+         "source": {"doc_id": "counter_slip", "page": 1, "quote": "Death certificate of recorded owner required"}}
+      ],
+      "provides": ["mutation_completed"],
+      "identity_fields": [
+        {"name": "owner_name", "value": "SUSHILA DEVI", "confidence": 0.97, "status": "read",
+         "source": {"doc_id": "aadhaar_heir", "page": 1, "quote": "SUSHILA DEVI"}}
+      ],
+      "unknown": false,
+      "raw_excerpt": "Printed checklist slip from tehsil counter listing mutation requirements."
+    },
+    {
+      "id": "O3",
+      "doc_id": "bank_letter",
+      "doc_type": "bank_letter",
+      "asked_what": "Complete succession claim on the deceased's bank account",
+      "asked_by": "Canara Bank, Khammam branch",
+      "due": {"name": "deadline", "value": "2026-09-01", "confidence": 0.9, "status": "read",
+              "source": {"doc_id": "bank_letter", "page": 1, "quote": "kindly complete formalities by 01.09.2026"}},
+      "amount": null,
+      "needs": [
+        {"key": "mutation_completed",
+         "quote": "attested copy of updated record of rights is required",
+         "source": {"doc_id": "bank_letter", "page": 1, "quote": "attested copy of updated record of rights is required"}}
+      ],
+      "provides": ["bank_succession_done"],
+      "identity_fields": [],
+      "unknown": false,
+      "raw_excerpt": "Bank letter listing documents for succession claim."
+    },
+    {
+      "id": "O4",
+      "doc_id": "sms_screenshot",
+      "doc_type": "sms_screenshot",
+      "asked_what": "Complete succession claim formalities on the account",
+      "asked_by": "Canara Bank Khammam branch",
+      "due": null,
+      "amount": null,
+      "needs": [],
+      "provides": [],
+      "identity_fields": [],
+      "unknown": false,
+      "raw_excerpt": "SMS: 'Dear customer, succession claim formalities pending. Visit branch.'"
+    },
+    {
+      "id": "O5",
+      "doc_id": "service_slip",
+      "doc_type": "unknown",
+      "asked_what": "Unclear printed slip from service centre visit",
+      "asked_by": "unknown",
+      "due": null,
+      "amount": null,
+      "needs": [],
+      "provides": [],
+      "identity_fields": [],
+      "unknown": true,
+      "raw_excerpt": "Faded thermal print, purpose unclear."
+    }
+  ],
+  "corrections": [],
+  "plan": null
+}

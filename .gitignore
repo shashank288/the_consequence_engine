@@ -1,0 +1,11 @@
+.env
+__pycache__/
+*.pyc
+.pytest_cache/
+cases.json
+fixtures/raw/
+fixtures/private/
+web/crops/
+*.zip
+.venv/
+venv/

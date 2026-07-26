@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Consequence Engine</title>
+<style>
+  :root{--bg:#0f1115;--card:#1a1e26;--tx:#e8eaf0;--mut:#8b93a7;--ok:#34c77b;--blk:#e05555;--unk:#c9a227;--dup:#7a86a8;--line:#2a3040}
+  *{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
+  header{padding:14px 22px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:baseline}
+  h1{font-size:18px;margin:0}small{color:var(--mut)}
+  main{max-width:1100px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 0 10px}
+  button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--tx)}
+  .item{border:1px solid var(--line);border-left:4px solid var(--mut);border-radius:8px;padding:10px 12px;margin:8px 0}
+  .item.actionable{border-left-color:var(--ok)} .item.blocked{border-left-color:var(--blk)}
+  .item.unknown{border-left-color:var(--unk)} .item.duplicate,.item.done{border-left-color:var(--dup);opacity:.65}
+  .badge{font-size:11px;padding:2px 8px;border-radius:99px;background:#242a36;color:var(--mut);margin-left:8px}
+  .nsa{background:#12351f;border:1px solid #1d5c36;border-radius:10px;padding:12px;margin-bottom:12px}
+  .edge{border-top:1px dashed var(--line);margin-top:8px;padding-top:8px;font-size:13.5px}
+  .quote{color:#ffd479;font-style:italic}
+  .refusal{background:#33202a;border:1px solid #5c2d3d;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13.5px}
+  input{background:#12151c;border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px}
+  #log{font-size:12px;color:var(--mut);white-space:pre-wrap}
+</style>
+</head>
+<body>
+<header><h1>⚖️ The Consequence Engine</h1><small>photograph the stack → one next action, nothing guessed</small></header>
+<main>
+  <div>
+    <section>
+      <h2>Case</h2>
+      <button onclick="loadFixture()">Load demo case (staged)</button>
+      <input type="file" id="files" multiple accept="image/*,.pdf" style="margin-left:8px">
+      <button class="ghost" onclick="uploadDocs()">Upload photographed stack</button>
+      <div id="nsa"></div>
+      <div id="plan"></div>
+    </section>
+    <section>
+      <h2>Why blocked — evidence quoted from the pages</h2>
+      <div id="edges"></div>
+    </section>
+  </div>
+  <div>
+    <section>
+      <h2>Escalation queue — refused, not guessed</h2>
+      <div id="refusals"></div>
+    </section>
+    <section>
+      <h2>Name / identity mismatches (record vs ID)</h2>
+      <div id="mismatches"></div>
+      <div style="margin-top:10px">
+        <input id="cfield" placeholder="field e.g. owner_name" size="14">
+        <input id="cdoc" placeholder="doc_id" size="14">
+        <input id="cnew" placeholder="corrected value" size="16">
+        <button class="ghost" onclick="correct()">Correct → propagate</button>
+      </div>
+    </section>
+    <section>
+      <h2>Mock tehsil status</h2>
+      <button class="ghost" onclick="markDone('record_name_matches_id')">Mark record corrected ✓</button>
+      <div id="log"></div>
+    </section>
+  </div>
+</main>
+<script>
+let CASE=null;
+const $=id=>document.getElementById(id);
+const say=t=>{$('log').textContent=(new Date().toLocaleTimeString())+"  "+t+"\n"+$('log').textContent};
+async function loadFixture(){const r=await fetch('/api/case/fixture/demo',{method:'POST'});render(await r.json());say('demo case loaded')}
+async function uploadDocs(){
+  const fd=new FormData();for(const f of $('files').files)fd.append('files',f);
+  const r=await fetch('/api/case',{method:'POST',body:fd});
+  if(r.status===501){say('extraction pipeline not merged yet — use demo case');return}
+  render(await r.json())
+}
+async function markDone(key){if(!CASE)return;const r=await fetch(`/api/case/${CASE.id}/status/${key}`,{method:'POST'});render(await r.json());say('status lookup: '+key+' now satisfied → plan re-sequenced')}
+async function correct(){if(!CASE)return;
+  const body={doc_id:$('cdoc').value,field_name:$('cfield').value,new:$('cnew').value};
+  const r=await fetch(`/api/case/${CASE.id}/correct`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const c=await r.json();render(c);
+  const last=c.corrections[c.corrections.length-1];
+  say(`correction propagated to: ${last.propagated_to.join(', ')}`)}
+function render(c){CASE=c;const p=c.plan;if(!p)return;
+  const byId=Object.fromEntries(c.drafts.map(d=>[d.id,d]));
+  $('nsa').innerHTML=p.next_single_action?`<div class="nsa"><b>DO THIS FIRST →</b> ${p.next_single_action}</div>`:'';
+  $('plan').innerHTML=p.items.sort((a,b)=>(a.order??99)-(b.order??99)).map(i=>{
+    const d=byId[i.obligation_id]||{};
+    return `<div class="item ${i.state}"><b>${d.asked_what||i.obligation_id}</b>
+      <span class="badge">${i.state}${i.duplicate_of?' of '+i.duplicate_of:''}</span>
+      <div><small>${d.asked_by||''} ${d.due&&d.due.value?('· due '+d.due.value):''}</small></div></div>`}).join('');
+  $('edges').innerHTML=p.edges.map(e=>`<div class="edge"><b>${e.blocked_id}</b> is blocked by <b>${e.blocker_id}</b><br>
+      <span class="quote">${e.reason}</span><br><small>evidence: ${e.evidence.map(s=>s.doc_id+(s.quote?` — “${s.quote}”`:'')).join(' · ')}</small></div>`).join('')||'<small>no blocking edges</small>';
+  $('refusals').innerHTML=p.refusals.map(r=>`<div class="refusal">✋ <b>${r.name}</b> — cannot be read safely (conf ${r.confidence}). Routed to human review.<br><small>${r.source?r.source.doc_id:''} ${r.source&&r.source.quote?'· '+r.source.quote:''}</small></div>`).join('')||'<small>nothing refused</small>';
+  $('mismatches').innerHTML=p.mismatches.map(m=>`<div class="edge"><b>${m.field_name}</b>: ${m.readings.map(r=>`“${r.value}”`).join(' vs ')}
+      <span class="badge">${m.classification}</span><br><small>${m.reason}</small></div>`).join('')||'<small>none found</small>';
+}
+</script>
+</body>
+</html>
