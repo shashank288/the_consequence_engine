@@ -7,11 +7,22 @@ Print this. Do not improvise the cold open.
 
 ## Before you walk up (5 minutes, do it once)
 
+⚠️ **Start the server from `c:\Projects\Hackathon_26\Sarvam` — NOT from a
+`ce-worktrees\*` folder.** A worktree runs an older `app.py`: the Reset button is
+there but its route is not, so it 404s. Kill any stray server first:
+
 ```powershell
+Get-NetTCPConnection -LocalPort 8000 -State Listen | ForEach-Object { Stop-Process -Id $_.OwningProcess -Force }
 cd c:\Projects\Hackathon_26\Sarvam
 py -3.12 -m scripts.smoke          # 27/27 → the demo path is intact
 py -3.12 -m uvicorn src.app:app --port 8000
 ```
+
+Confirm you are on the right build — this must list **8** routes including `/reset`:
+```powershell
+(Invoke-RestMethod "http://localhost:8000/openapi.json").paths.PSObject.Properties.Name
+```
+Then **hard-refresh the browser (`Ctrl+Shift+R`)** so no stale JavaScript survives.
 Open **http://localhost:8000**. Then:
 
 1. Click **Load demo case** → confirm the rail renders and the banner is filled.
