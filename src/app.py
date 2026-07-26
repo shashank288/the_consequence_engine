@@ -15,8 +15,10 @@ from fastapi import FastAPI, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from .case_store import load_case, save_case
-from .contracts import Case, Correction
+from .case_store import (CorrectionTargetNotFound, apply_correction, case_meta,
+                         correction_targets, list_cases, load_case, log_correction,
+                         reset_case, save_case)
+from .contracts import Case
 from .sequencer.core import build_plan
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -46,9 +48,31 @@ async def create_from_uploads(files: list[UploadFile]):
     raise HTTPException(501, "extraction pipeline lands via feat/extraction; use fixture mode")
 
 
+@app.get("/api/cases")
+def list_all_cases():
+    """Demo hygiene: which cases exist on disk and where each one stands."""
+    return list_cases()
+
+
 @app.get("/api/case/{case_id}")
 def get_case(case_id: str):
+    """Reload-resume (Memory L4): read from disk every call, so a fresh process
+    serves the identical plan. `correction_log` carries the propagation history
+    the FROZEN Case contract has no field for."""
     case = load_case(case_id)
+    if case is None:
+        raise HTTPException(404, "no such case")
+    meta = case_meta(case_id)
+    return {**case.model_dump(),
+            "created": meta.get("created"),
+            "updated": meta.get("updated"),
+            "correction_log": meta.get("correction_log", [])}
+
+
+@app.post("/api/case/{case_id}/reset")
+def reset(case_id: str):
+    """Back to as-loaded state so the demo can be run repeatedly (M5)."""
+    case = reset_case(case_id)
     if case is None:
         raise HTTPException(404, "no such case")
     return case.model_dump()
@@ -69,26 +93,27 @@ def mark_done(case_id: str, key: str):
 
 @app.post("/api/case/{case_id}/correct")
 def correct(case_id: str, body: dict):
-    """Correction propagation (Memory L4): patch one field reading, rebuild, record."""
+    """Correction propagation (Memory L4).
+
+    Patches EVERY reading of (doc_id, field_name), re-derives the plan, and
+    returns the before/after diff — `propagated_to` names the obligations whose
+    state, mismatch, blocking edge or refusal actually changed. Unknown targets
+    are refused with the available ones, never recorded as a silent no-op.
+    """
     case = load_case(case_id)
     if case is None:
         raise HTTPException(404, "no such case")
     doc_id, field, new = body.get("doc_id"), body.get("field_name"), body.get("new")
     if not (doc_id and field and new):
         raise HTTPException(422, "doc_id, field_name, new required")
-    old, touched = None, []
-    for d in case.drafts:
-        for f in [d.due, d.amount, *d.identity_fields]:
-            if f and f.name == field and f.source and f.source.doc_id == doc_id:
-                old, f.value, f.status, f.confidence = f.value, new, "read", 1.0
-                touched.append(d.id)
-    case.plan = build_plan(case)
-    touched += [e.blocked_id for e in case.plan.edges if any(
-        s.doc_id == doc_id for s in e.evidence)]
-    case.corrections.append(Correction(doc_id=doc_id, field_name=field, old=old,
-                                       new=new, propagated_to=sorted(set(touched))))
+    try:
+        case, correction, diff = apply_correction(case, doc_id, field, new)
+    except CorrectionTargetNotFound as exc:
+        raise HTTPException(404, {"error": str(exc),
+                                  "available_targets": exc.available}) from exc
     save_case(case)
-    return case.model_dump()
+    log_correction(case_id, {"correction": correction.model_dump(), "diff": diff})
+    return {**case.model_dump(), "last_correction": correction.model_dump(), "diff": diff}
 
 
 app.mount("/", StaticFiles(directory=ROOT / "web", html=True), name="web")
