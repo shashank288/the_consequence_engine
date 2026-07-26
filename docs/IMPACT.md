@@ -87,11 +87,33 @@ checklist rather than asserting procedure from memory.
 | Land matters are 1.36× more likely to be pending 5+ years (DAKSH 2016) | "Land is 66% of Indian civil cases" |
 | Our own measured accuracy / refusal rate on held-out pages | Any legal validity or title-clarity claim |
 
-## Our own number (fill in at M5)
+## Our own number — measured live on the held-out page
 
-The cards ask for a stated number on held-back inputs. Record here after testing:
+`register_holdout.png` (seed 13) was generated at the start of the build and **never
+opened during it**. Run live through `POST /api/case` → real Sarvam doc-digitization
+job → plan. Reproduce with `py -3.12 -m scripts.live_holdout`.
 
-- Pages tested: `__`
-- Consequence-bearing fields read correctly: `__ / __`
-- Fields refused rather than guessed: `__`
-- **Fields guessed wrong: `__` ← this must be 0**
+| Measure | Result |
+|---|---:|
+| Consequence-bearing fields seen | 6 |
+| Read with a confidence | 3 |
+| **Refused and routed to a human** | **3** |
+| Refusals carrying a crop for review | 2 |
+| Contradictions flagged vs the records system | 1 |
+| **Fields guessed wrong** | **0** |
+| Refused fields still carrying a value | 0 |
+| Wall clock, upload → plan | **72.4 s** |
+
+**The line to say on stage:**
+
+> "On a page this system had never seen, it read three fields, refused three, and
+> guessed **zero**. The area column is under a tehsil seal — it says so, shows you
+> the crop, and routes it. It does not invent a number that would get the mutation
+> rejected."
+
+Read fields: `father_name` 0.90 · `survey_no` 0.85 · `khata_no` 0.85.
+Refused: `plot_area` (occluded_by_seal) · `owner_name` (low confidence — the
+struck-through correction returned two names) · `deadline` (absent from the page).
+
+⚠️ **72.4 s is a demo risk, not a product claim.** See IDEA_SCOPE §11. Do not run the
+live upload cold in front of judges without starting it before you begin talking.

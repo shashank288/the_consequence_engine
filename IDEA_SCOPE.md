@@ -197,6 +197,7 @@ Public URL (tunnel), 3 repeated runs incl. unseen page, reset script, fallback r
 | LLM normalisation flaky | M | edges wrong | M1 | quotes mandatory, cache raw, few-shot | hand-fix drafts JSON (staged = sanctioned) |
 | Venue network | M | live fail | M5 | localhost + tunnel + recording | recording |
 | Solo time | H | M3+ unfinished | each gate | cut order: voice → crops → SQLite → correction UI | fixture demo is always green |
+| **Live upload takes 72 s** | **certain** | **eats 60% of a 2-min demo** | measured 15:33 | **start the upload BEFORE speaking, narrate the fixture case while it runs, cut back to the live result** | fixture + `case_register` are instant; live result also pre-cached in `fixtures/raw/` |
 
 **Pre-mortem:** (1) judge saw a to-do list → edges+quotes are the hero panel, demo leads with them; (2) a guessed field live → hard threshold + held-out rehearsal; (3) nothing e2e at 16:20 → fixture golden path locked green from 12:30.
 
