@@ -119,7 +119,7 @@ Creative Studio/dubbing, voice cloning (beta), realtime/telephony, Studio automa
 | JTBD completion | 2.5× | L1 | L4 | 10 | packet written+re-read; 3 repeated staged cases | pipeline+fixtures | M1–M2 |
 | Memory & Context | 1× | L1 | L4 | 4 | reload-resume; correction propagates with visible list | case_store+correct | M4 |
 | Creativity | 1.5× | L1 | L4 | 6 | edges with quoted reasons; dedupe; status drop; mismatch classes | sequencer+UI | M2 |
-| Impact | 1.5× | L1 | L3–L4 | 4.5–6 | sourced baseline figure + our held-out accuracy/refusal numbers | GPT sourcing + eval note | M5 |
+| Impact | 1.5× | **L3** | L4 | 6 | Punjab dashboard verified live: mean 43.99d vs median 18.0d, 35,609 pending — the gap IS the resubmission tail we target (docs/IMPACT.md) | add our held-out accuracy/refusal numbers | M5 |
 | Delight | 1× | L1 | L4 | 4 | refusal crop + preserved analysis + retake instruction | register+UI | M3 |
 | **Document Intelligence** | 2.5× | L1 | **L4–L5** | 10–12.5 | handwritten page → structure + source refs + controlled uncertainty on unseen page | extraction+register | M1,M3 |
 | **Total** | | | | **38.5–42.5 /50** | | | |
@@ -232,3 +232,5 @@ Rules: one owner per component; contracts.py frozen; golden path stays runnable;
 | 12:05 | Reframe user to counter/heir | Impact needs payer+frequency |
 | 12:10 | Option 2 (land mutation) over Option 1 | card 87 native → DI L5 reachable |
 | 12:30 | Voice = first cut | DI is the scored parameter |
+| 13:50 | Hard input = generated synthetic register page, real degradation | No public real handwritten register exists at usable resolution without live personal data. Content synthetic, difficulty real (mixed script, struck-through correction, stamp occlusion, fold/fade/skew). Framing in docs/DATASET.md |
+| 13:55 | Impact baseline = Punjab jamabandi dashboard | Verified live today; mean 43.99d vs median 18.0d gap is a defensible, state-published number. Impact L3 secured, L4 on our own held-out numbers |
