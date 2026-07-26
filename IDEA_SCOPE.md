@@ -96,9 +96,9 @@ Automated: classification, extraction, sequencing, dedupe. Confirmation: correct
 ### Verified capability matrix (docs.sarvam.ai, fetched 2026-07-26)
 | Required capability | Product/API/model | Exact endpoint/access | Languages/inputs | Limits | Verification source |
 |---|---|---|---|---|---|
-| Doc field extraction | Sarvam Vision via Document Intelligence job API | `/api/document-intelligence/{initialize,get-upload-links,start,status,get-download-links}` | 23 langs, handwriting | 10 pages / 200 MB (API); Studio 50 MB / 10 pages | docs.sarvam.ai/llms.txt + models page |
+| Doc field extraction | Sarvam doc-digitization job API (Vision) | **`/doc-digitization/job/v1{,/upload-files,/{id}/start,/{id}/status,/{id}/download-files}`** — the documented `/api/document-intelligence/*` family **does not exist** | 23 langs, handwriting | input **.pdf or .zip only**, 1 file, 200 MB / 10 pages; `output_format` ∈ {html, md} (**no json**); `job_parameters` **required**; PUT needs `x-ms-blob-type: BlockBlob`; download is a **ZIP** | **VERIFIED LIVE in M0**, job `20260726_46a20ccd…`, 9.4 s |
 | Config head-start | Akshar dashboard templates | dashboard (user logged in, 5100 credits) | KYC Doc, Court Appeal, GST Registration, **Bengali Notarised Land Deed (Digitize)** | 12 templates | user screenshot 11:45 |
-| Normalisation | sarvam-105b | `POST /v1/chat/completions` | 11 langs | — | quickstart |
+| Normalisation | sarvam-105b | `POST /v1/chat/completions` | 11 langs | **reasoning model — thinking bills against the answer budget; at max_tokens 2048 it returns 200 with `content: null`. Hard cap 4096 (starter tier); we send 4096** | **VERIFIED LIVE in M0** |
 | Hindi text | sarvam-translate | `POST /translate` | 23 langs | — | models page |
 | Hindi audio | bulbul:v3 | `POST /text-to-speech` | 11 langs, 30+ voices | — | models page |
 | Auth | api-subscription-key header | api.sarvam.ai | — | — | quickstart |

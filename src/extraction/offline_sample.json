@@ -1,0 +1,108 @@
+{
+  "_README": [
+    "MIXED PROVENANCE - read this before trusting any entry here.",
+    "",
+    "Replayed when SARVAM_OFFLINE=1 and no real cached response exists for the",
+    "page. fixtures/raw/<stem>.docintel.json always takes precedence over this.",
+    "",
+    "  register_page  -> A REAL SARVAM RESPONSE, captured 2026-07-26 by running",
+    "                    fixtures/private/register_page.png through the live",
+    "                    doc-digitization job (job 20260726_46a20ccd). Verbatim,",
+    "                    including its OCR errors. The page content is synthetic",
+    "                    (see docs/DATASET.md) - no real person's data - but the",
+    "                    extraction is genuine.",
+    "  counter_slip   -> hand-authored stand-in. NOT a real API response.",
+    "  bank_letter    -> hand-authored stand-in. NOT a real API response.",
+    "  default        -> hand-authored stand-in. NOT a real API response.",
+    "",
+    "The hand-authored entries use different container shapes on purpose",
+    "(pages[].markdown, a bare string, a flat {text}) so the normaliser stays",
+    "defensive about shapes we have not seen from the API yet.",
+    "",
+    "What the real capture shows, and what the tests therefore exercise:",
+    "  - tables come back as HTML <table> embedded in markdown",
+    "  - a struck-through-and-rewritten cell arrives as <br/>-separated values:",
+    "    the owner cell reads 'सुशीला बाई<br/>सुशीला देवी'",
+    "  - the tehsil stamp bled INTO the area cell, which reads",
+    "    '१ एकड़ ०५ गुंठा<br/>तहसील<br/>३ एकड़ ०४ गुंठा', and row 3's area is empty",
+    "  - confidence is per LAYOUT BLOCK, not per field: the whole table is one",
+    "    block at 0.912, which is why it is used only as a ceiling"
+  ],
+  "documents": {
+    "register_page": {
+      "file_name": "document.zip",
+      "content": {
+        "markdown": "## ग्राम नमूना नं. ७/१२ — अधिकार अभिलेख\n\n<table>\n<thead>\n<tr>\n<th>खाता</th>\n<th>सर्वे नं.</th>\n<th>मालिक का नाम</th>\n<th>पिता का नाम</th>\n<th>क्षेत्रफल</th>\n<th>फेरफार</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>१२</td>\n<td>SN-142/2</td>\n<td>रामऱ्या स.</td>\n<td>वेंकटय्या</td>\n<td>२ एकड़ १३ गुंठा</td>\n<td>म. १९९८/४७</td>\n</tr>\n<tr>\n<td>१३</td>\n<td>SN-143</td>\n<td>सुशीला बाई<br/>सुशीला देवी</td>\n<td>रामय्या</td>\n<td>१ एकड़ ०५ गुंठा<br/>तहसील<br/>३ एकड़ ०४ गुंठा</td>\n<td>म. २००४/११</td>\n</tr>\n<tr>\n<td>१४</td>\n<td>SN-144/1</td>\n<td>लक्ष्मीम्मा</td>\n<td>नरसय्या</td>\n<td></td>\n<td>म. १९८७/०९</td>\n</tr>\n<tr>\n<td>१५</td>\n<td>SN-145</td>\n<td>गोविंद राव</td>\n<td>शंकर राव</td>\n<td>०२ एकड़ ३० गुंठा</td>\n<td>म. २०११/०३</td>\n</tr>\n</tbody>\n</table>",
+        "pages": [
+          {
+            "page_number": 1,
+            "text": "ग्राम नमूना नं. ७/१२ — अधिकार अभिलेख\n\n<table>\n<thead>\n<tr>\n<th>खाता</th>\n<th>सर्वे नं.</th>\n<th>मालिक का नाम</th>\n<th>पिता का नाम</th>\n<th>क्षेत्रफल</th>\n<th>फेरफार</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>१२</td>\n<td>SN-142/2</td>\n<td>रामऱ्या स.</td>\n<td>वेंकटय्या</td>\n<td>२ एकड़ १३ गुंठा</td>\n<td>म. १९९८/४७</td>\n</tr>\n<tr>\n<td>१३</td>\n<td>SN-143</td>\n<td>सुशीला बाई<br/>सुशीला देवी</td>\n<td>रामय्या</td>\n<td>१ एकड़ ०५ गुंठा<br/>तहसील<br/>३ एकड़ ०४ गुंठा</td>\n<td>म. २००४/११</td>\n</tr>\n<tr>\n<td>१४</td>\n<td>SN-144/1</td>\n<td>लक्ष्मीम्मा</td>\n<td>नरसय्या</td>\n<td></td>\n<td>म. १९८७/०९</td>\n</tr>\n<tr>\n<td>१५</td>\n<td>SN-145</td>\n<td>गोविंद राव</td>\n<td>शंकर राव</td>\n<td>०२ एकड़ ३० गुंठा</td>\n<td>म. २०११/०३</td>\n</tr>\n</tbody>\n</table>",
+            "image_width": 1067,
+            "image_height": 1373,
+            "blocks": [
+              {
+                "text": "ग्राम नमूना नं. ७/१२ — अधिकार अभिलेख",
+                "confidence": 0.5827397704124451,
+                "bbox": [
+                  0.3289597000937207,
+                  0.035688273852876914,
+                  0.7347703842549204,
+                  0.05826656955571741
+                ],
+                "bbox_px": [
+                  351.0,
+                  49.0,
+                  784.0,
+                  80.0
+                ],
+                "layout_tag": "headline",
+                "block_id": "20260726_d07220d4-88cc-4669-a236-8f62c5decb09_1_block_000",
+                "reading_order": 1
+              },
+              {
+                "text": "<table>\n<thead>\n<tr>\n<th>खाता</th>\n<th>सर्वे नं.</th>\n<th>मालिक का नाम</th>\n<th>पिता का नाम</th>\n<th>क्षेत्रफल</th>\n<th>फेरफार</th>\n</tr>\n</thead>\n<tbody>\n<tr>\n<td>१२</td>\n<td>SN-142/2</td>\n<td>रामऱ्या स.</td>\n<td>वेंकटय्या</td>\n<td>२ एकड़ १३ गुंठा</td>\n<td>म. १९९८/४७</td>\n</tr>\n<tr>\n<td>१३</td>\n<td>SN-143</td>\n<td>सुशीला बाई<br/>सुशीला देवी</td>\n<td>रामय्या</td>\n<td>१ एकड़ ०५ गुंठा<br/>तहसील<br/>३ एकड़ ०४ गुंठा</td>\n<td>म. २००४/११</td>\n</tr>\n<tr>\n<td>१४</td>\n<td>SN-144/1</td>\n<td>लक्ष्मीम्मा</td>\n<td>नरसय्या</td>\n<td></td>\n<td>म. १९८७/०९</td>\n</tr>\n<tr>\n<td>१५</td>\n<td>SN-145</td>\n<td>गोविंद राव</td>\n<td>शंकर राव</td>\n<td>०२ एकड़ ३० गुंठा</td>\n<td>म. २०११/०३</td>\n</tr>\n</tbody>\n</table>",
+                "confidence": 0.9122294187545776,
+                "bbox": [
+                  0.02530459231490159,
+                  0.06482155863073562,
+                  1.0,
+                  0.9184268026219956
+                ],
+                "bbox_px": [
+                  27.0,
+                  89.0,
+                  1067.0,
+                  1261.0
+                ],
+                "layout_tag": "table",
+                "block_id": "20260726_d07220d4-88cc-4669-a236-8f62c5decb09_1_block_001",
+                "reading_order": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "counter_slip": {
+      "file_name": "counter_slip.json",
+      "content": {
+        "pages": [
+          {
+            "page_number": 1,
+            "markdown": "तहसील कार्यालय — फेरफार (म्यूटेशन) आवेदन चेकलिस्ट\n\n1. मृत्यु प्रमाण पत्र की प्रति आवश्यक है / Death certificate of the recorded owner is required.\n2. वारसाहक्क प्रमाणपत्र अथवा नोटरीकृत शपथपत्र आवश्यक है / Heirship certificate or a notarised affidavit is required.\n3. Name of applicant must match the record-of-rights entry exactly.\n4. आवेदन दिनांक 14/08/2026 तक तलाठी कार्यालय में जमा करें / Submit the application to the Talathi office by 14/08/2026.\n5. प्रक्रिया अवधि: 25 दिन।\n"
+          }
+        ]
+      }
+    },
+    "bank_letter": {
+      "file_name": "bank_letter.txt",
+      "content": "Canara Bank, Khammam Branch\n\nSub: Succession claim on account of the late account holder.\n\nTo settle the claim, an attested copy of the updated record of rights is required along with the death certificate. Kindly complete the formalities by 01.09.2026.\n\nBranch Manager\n"
+    },
+    "default": {
+      "file_name": "unreadable.json",
+      "content": {
+        "text": "  ...  र ??  सेवा  —  रसीद  ???  \n  no. ____   dt. __/__/____\n"
+      }
+    }
+  }
+}
