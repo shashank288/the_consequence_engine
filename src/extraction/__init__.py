@@ -9,8 +9,9 @@ Modules:
   confidence.py  how much we believe a field, earned from evidence on the page
   prompts.py     the normalisation prompt + the shared requirement-key vocabulary
   offline_sample.json
-                 hand-authored stand-in replayed under SARVAM_OFFLINE=1.
-                 NOT a real API capture — see the file's own _README.
+                 replayed under SARVAM_OFFLINE=1. MIXED PROVENANCE: the
+                 register_page entry is a REAL captured response; the rest are
+                 hand-authored stand-ins. See the file's own _README.
 
 The invariants this package exists to hold, in priority order:
   1. No requirement without a quote that is verbatim on the page.
@@ -18,8 +19,9 @@ The invariants this package exists to hold, in priority order:
   3. No confidence of 1.0 when the API supplied none.
   4. No forced document type — "unknown" is always available.
 
-Status: verified end to end offline (tests/test_extraction.py). The live
-Doc-Intelligence call is wired to the documented job flow and driven against
-those shapes in tests, but has never run against the real API — there was no
-SARVAM_API_KEY at build time. See docs/handoff/feat-extraction.md.
+Status: M0 VERIFIED — fixtures/private/register_page.png ran through the live
+doc-digitization API on 2026-07-26 (9.4s), and POST /api/case runs it end to
+end. The docs were wrong in five places and Sarvam's confidence turned out to be
+per layout block rather than per field; both are written up in
+docs/handoff/feat-extraction.md, which main needs for config.py + §5.
 """

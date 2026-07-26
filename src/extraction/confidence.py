@@ -53,6 +53,12 @@ class Score(NamedTuple):
 CEILING = 0.95          # we never saw the paper; certainty is not available
 FLOOR = 0.05
 
+# How a cell that holds more than one line is written after rendering. Sarvam
+# returns those as <br/>-separated runs, which on a register page is exactly
+# what a struck-through-and-rewritten entry looks like.
+MULTIVALUE = " ; "
+MULTIVALUE_PENALTY = -0.35
+
 BASE = 0.35
 SHAPE_MATCH = 0.35
 SHAPE_MISS = -0.10
@@ -126,9 +132,15 @@ def _occurrences(value: str, page_text: str) -> int:
 
 
 def score(field: str, value: str, page_text: str = "",
-          api_confidence: float | None = None) -> Score:
+          api_confidence: float | None = None, ceiling: float | None = None) -> Score:
     """Reasons are user-facing: they are what the escalation queue shows a human
-    next to the crop."""
+    next to the crop.
+
+    `api_confidence` is Sarvam's number for a region that IS this field.
+    `ceiling` is Sarvam's number for a larger layout block this field was read
+    out of — a field can never be more certain than the block it came from, but
+    that block's score says nothing about this particular cell.
+    """
     if api_confidence is not None:
         return Score(max(FLOOR, min(CEILING, float(api_confidence))),
                      ["confidence reported by Doc-Intelligence for this region"], [])
@@ -149,6 +161,12 @@ def score(field: str, value: str, page_text: str = "",
         reasons.append(why)
         if delta < 0:
             penalties.append(why)
+
+    if MULTIVALUE in value:
+        parts = [p for p in value.split(MULTIVALUE) if p.strip()]
+        award(MULTIVALUE_PENALTY,
+              f"the cell holds {len(parts)} separate entries — a correction or "
+              "overwrite; which one is current cannot be read off the page")
 
     verdict = _shape_verdict(field, value)
     if verdict is not None:
@@ -175,5 +193,10 @@ def score(field: str, value: str, page_text: str = "",
             award(AMBIGUOUS_DATE,
                   f"read day-first per Indian convention — '{m.group(0)}' could "
                   "also be month-first")
+
+    if ceiling is not None and conf > ceiling:
+        conf = ceiling
+        reasons.append(f"capped at {ceiling:.2f} — the confidence Sarvam gave "
+                       "the layout block this field was read out of")
 
     return Score(max(FLOOR, min(CEILING, round(conf, 3))), reasons, penalties)

@@ -16,8 +16,10 @@ bucket instead of being forced into one.
 """
 from __future__ import annotations
 
+import io
 import json
 import pathlib
+import zipfile
 
 import pytest
 
@@ -199,11 +201,26 @@ def test_no_key_and_no_offline_switch_refuses_instead_of_guessing(monkeypatch, t
         doc_intelligence_extract(page(tmp_path, "register_page"))
 
 
-def test_offline_sample_is_labelled_as_a_stand_in():
-    """Guards against this file ever being mistaken for a real API capture."""
+def test_every_offline_sample_entry_declares_its_provenance():
+    """The file now mixes one REAL captured response with hand-authored
+    stand-ins. Guards against an entry being added — or the real one being
+    edited — without the README saying which is which, because "is this actual
+    model output?" is the first question a judge asks."""
     sample = json.loads(
         (pathlib.Path("src/extraction/offline_sample.json")).read_text(encoding="utf-8"))
-    assert "NOT A REAL SARVAM RESPONSE" in " ".join(sample["_README"])
+    readme = " ".join(sample["_README"])
+
+    assert "MIXED PROVENANCE" in readme
+    assert "A REAL SARVAM RESPONSE" in readme
+    for name in sample["documents"]:
+        assert name in readme, f"{name} has no provenance line in _README"
+    hand_authored = [n for n in sample["documents"] if n != "register_page"]
+    assert readme.count("NOT a real API response") >= len(hand_authored)
+
+    # The real capture must still look like one: unpacked pages with layout
+    # blocks carrying Sarvam's own confidence.
+    blocks = sample["documents"]["register_page"]["content"]["pages"][0]["blocks"]
+    assert any(b["layout_tag"] == "table" and b["confidence"] > 0.9 for b in blocks)
 
 
 # --- the whole chain ----------------------------------------------------------
@@ -244,9 +261,33 @@ def test_photos_to_plan_yields_one_next_action_and_a_quoted_blocking_edge(tmp_pa
 
 # --- the live job flow, driven against the documented shapes ------------------
 
+def _result_zip() -> bytes:
+    """The verified download payload: a ZIP holding document.md (tables as HTML)
+    plus one metadata/page_NNN.json of layout blocks with pixel coordinates."""
+    table = ("<table><tbody><tr><td>१३</td><td>SN-143</td>"
+             "<td>सुशीला बाई<br/>सुशीला देवी</td></tr></tbody></table>")
+    meta = {"page_num": 1, "image_width": 1067, "image_height": 1373,
+            "blocks": [
+                {"block_id": "b0", "layout_tag": "headline", "confidence": 0.5827,
+                 "reading_order": 1, "text": "अधिकार अभिलेख",
+                 "coordinates": {"x1": 351.0, "y1": 49.0, "x2": 784.0, "y2": 80.0}},
+                {"block_id": "b1", "layout_tag": "table", "confidence": 0.9122,
+                 "reading_order": 2, "text": table,
+                 "coordinates": {"x1": 27.0, "y1": 89.0, "x2": 1067.0, "y2": 1261.0}}]}
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("document.md", f"## अधिकार अभिलेख\n\n{table}")
+        zf.writestr("metadata/page_001.json", json.dumps(meta, ensure_ascii=False))
+    return buf.getvalue()
+
+
 class _FakeResponse:
-    def __init__(self, payload=None, text="", status_code=200):
-        self._payload, self.text, self.status_code = payload, text, status_code
+    def __init__(self, payload=None, content=b"", status_code=200):
+        self._payload, self.content, self.status_code = payload, content, status_code
+
+    @property
+    def text(self):
+        return self.content.decode("utf-8", "replace")
 
     def json(self):
         if self._payload is None:
@@ -289,7 +330,7 @@ class _FakeClient:
         if url.endswith("/download-files"):
             return _FakeResponse({
                 "job_id": "JOB-1", "job_state": "Completed",
-                "download_urls": {"register_page.json": {"file_url": "https://blob/down"}}})
+                "download_urls": {"document.zip": {"file_url": "https://blob/down"}}})
         raise AssertionError(f"unexpected POST {url}")
 
     def put(self, url, content=None, headers=None):
@@ -303,7 +344,7 @@ class _FakeClient:
             state = "Running" if self.status_calls < 2 else "Completed"
             return _FakeResponse({"job_id": "JOB-1", "job_state": state,
                                   "job_details": [{"state": "Success"}]})
-        return _FakeResponse({"pages": [{"page_number": 1, "text": "| खाता | क्षेत्रफल |"}]})
+        return _FakeResponse(content=_result_zip())
 
 
 def test_live_job_flow_hits_the_documented_endpoints_in_order(monkeypatch, tmp_path):
@@ -339,9 +380,23 @@ def test_live_job_flow_hits_the_documented_endpoints_in_order(monkeypatch, tmp_p
 
     assert payload["provenance"] == "sarvam-doc-digitization"
     assert payload["job_id"] == "JOB-1"
-    assert payload["documents"][0]["content"]["pages"][0]["text"]
+
+    # The download is a ZIP, and it must be unpacked into pages with blocks.
+    content = payload["documents"][0]["content"]
+    assert "<table>" in content["markdown"]
+    page_one = content["pages"][0]
+    assert page_one["page_number"] == 1
+    table_block = next(b for b in page_one["blocks"] if b["layout_tag"] == "table")
+    assert table_block["confidence"] == pytest.approx(0.9122)
+    # Pixel coordinates are normalised 0-1 for the FROZEN SourceRef contract,
+    # and kept in pixels alongside for feat/register's crops.
+    assert table_block["bbox"] == pytest.approx([27 / 1067, 89 / 1373, 1.0, 1261 / 1373])
+    assert table_block["bbox_px"] == [27.0, 89.0, 1067.0, 1261.0]
+
     # Every step's shape is on disk — that IS the M0 deliverable.
     assert (tmp_path / "raw" / "register_page.docintel.json").exists()
+    assert (tmp_path / "raw" / "register_page.result.document.zip").exists()
+    assert (tmp_path / "raw" / "register_page.result.metadata_page_001.json").exists()
 
 
 def test_presence_of_a_death_certificate_satisfies_the_requirement(tmp_path):

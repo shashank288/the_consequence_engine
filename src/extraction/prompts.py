@@ -65,7 +65,11 @@ ABSOLUTE RULES — breaking any of these makes your answer useless:
 6. Copy values exactly as written, in the page's own script. Do not transliterate
    Devanagari to Latin, and do not translate names.
 
-Return a single JSON object, nothing else."""
+Return a single JSON object, nothing else.
+
+Answer directly. Do not deliberate at length — on this account the reasoning and
+the answer share one 4096-token budget, and a long deliberation leaves no room
+for the JSON, which is returned as null and thrown away."""
 
 
 def _schema_block() -> str:

@@ -26,13 +26,14 @@ from __future__ import annotations
 
 import pathlib
 import re
+from html import unescape
 
 from ..config import REFUSE_BELOW
 from ..contracts import FieldReading, ObligationDraft, Requirement, SourceRef
 from ..sarvam_client import SarvamUnavailable, chat_json, doc_intelligence_extract, offline_mode
 from ..sequencer.dates import to_iso
 from . import prompts
-from .confidence import score
+from .confidence import MULTIVALUE, score
 
 # --- what a document TYPE means for the plan ---------------------------------
 # AUTHORED MAPPING, not an extracted claim: once this kind of document is in
@@ -126,28 +127,88 @@ class Page:
 
     def __init__(self, doc_id: str, number: int, text: str, blocks: list[dict] | None = None):
         self.doc_id, self.number, self.text = doc_id, number, text
-        self.blocks = blocks or []
+        # Block text is rendered the same way the page text is, so a value read
+        # out of the rendered page can still be located in the block that
+        # produced it (and inherit its confidence ceiling and bbox).
+        self.blocks = [{**b, "text": _render(str(b.get("text") or b.get("content") or ""))}
+                       for b in (blocks or []) if isinstance(b, dict)]
 
-    def api_confidence(self, value: str) -> float | None:
-        """If the API happened to score the region this value came from, use it.
-        Nothing in the docs promises this exists — hence the None path."""
+    def _containing(self, value: str) -> dict | None:
+        """Smallest block whose text contains `value`."""
+        best = None
         for b in self.blocks:
             btext = str(b.get("text") or b.get("content") or "")
-            if value and value in btext:
-                for k in ("confidence", "score", "conf"):
-                    if isinstance(b.get(k), (int, float)):
-                        return float(b[k])
-        return None
+            if value and value in btext and (best is None or len(btext) < best[0]):
+                best = (len(btext), b)
+        return best[1] if best else None
+
+    def api_confidence(self, value: str) -> tuple[float | None, bool]:
+        """-> (confidence, is_tight).
+
+        VERIFIED M0: Sarvam scores LAYOUT blocks, not fields. Our whole register
+        table came back as one block at 0.912 — handing that to the cell the
+        tehsil stamp ate would read a value nobody can read, at high confidence.
+        So the number is only a verdict when the block IS essentially the field
+        (`is_tight`); otherwise the caller uses it as a ceiling and earns the
+        rest from evidence.
+        """
+        block = self._containing(value)
+        if block is None:
+            return None, False
+        conf = next((float(block[k]) for k in ("confidence", "score", "conf")
+                     if isinstance(block.get(k), (int, float))), None)
+        if conf is None:
+            return None, False
+        btext = str(block.get("text") or block.get("content") or "").strip()
+        return conf, btext == value.strip()
 
     def bbox(self, value: str) -> list[float] | None:
-        for b in self.blocks:
-            btext = str(b.get("text") or b.get("content") or "")
-            if value and value in btext:
-                for k in ("bbox", "bounding_box", "box"):
-                    box = b.get(k)
-                    if isinstance(box, list) and len(box) == 4:
-                        return [float(v) for v in box]
+        block = self._containing(value)
+        if not block:
+            return None
+        for k in ("bbox", "bounding_box", "box"):
+            box = block.get(k)
+            if isinstance(box, list) and len(box) == 4:
+                return [float(v) for v in box]
         return None
+
+
+# --- rendering the API's markup into text a human could check against the page
+
+_TABLE_RX = re.compile(r"<table\b.*?</table>", re.I | re.S)
+_ROW_RX = re.compile(r"<tr\b[^>]*>(.*?)</tr>", re.I | re.S)
+_CELL_RX = re.compile(r"<t[hd]\b[^>]*>(.*?)</t[hd]>", re.I | re.S)
+_BR_RX = re.compile(r"<br\s*/?>", re.I)
+_TAG_RX = re.compile(r"<[^>]+>")
+
+
+def _cell_text(html: str) -> str:
+    """A table cell -> text. VERIFIED M0: Sarvam marks a cell holding more than
+    one line — which is how a struck-through-and-rewritten entry comes back —
+    with <br/>. That is the single most valuable signal on the register page, so
+    it is preserved as MULTIVALUE rather than flattened into a run-on string."""
+    parts = [_TAG_RX.sub("", p) for p in _BR_RX.split(html)]
+    parts = [unescape(p).strip() for p in parts]
+    return MULTIVALUE.join(p for p in parts if p)
+
+
+def _render(text: str) -> str:
+    """Doc-Intelligence markdown (with embedded HTML tables) -> flat text.
+
+    Tables become pipe rows, so one table parser serves both the real API output
+    and a plain markdown page — and every quote we later hand a human is a line
+    they can read, not a fragment of markup.
+    """
+    def table(match: re.Match) -> str:
+        lines = []
+        for row in _ROW_RX.findall(match.group(0)):
+            cells = [_cell_text(c) for c in _CELL_RX.findall(row)]
+            if cells:
+                lines.append("| " + " | ".join(cells) + " |")
+        return "\n".join(lines)
+
+    rendered = _TABLE_RX.sub(table, text)
+    return unescape(_TAG_RX.sub("", rendered))
 
 
 _TEXT_KEYS = ("text", "markdown", "md", "content", "html", "plain_text")
@@ -180,9 +241,9 @@ def _pages(payload: dict, doc_id: str) -> list[Page]:
                         if isinstance(p.get(k), list):
                             blocks = p[k]
                             break
-                out.append(Page(doc_id, number, _text_of(p), blocks))
+                out.append(Page(doc_id, number, _render(_text_of(p)), blocks))
         else:
-            out.append(Page(doc_id, len(out) + 1, _text_of(content)))
+            out.append(Page(doc_id, len(out) + 1, _render(_text_of(content))))
     return [p for p in out if p.text.strip()] or out
 
 
@@ -224,7 +285,10 @@ def _reading(name: str, value: str | None, page: Page, quote: str | None,
     value = value.strip()
     evidence = (page_value or value).strip()
     verified = _verify_quote(quote, page.text) or _verify_quote(evidence, page.text)
-    scored = score(name, evidence, page.text, page.api_confidence(evidence))
+    block_conf, tight = page.api_confidence(evidence)
+    scored = score(name, evidence, page.text,
+                   api_confidence=block_conf if tight else None,
+                   ceiling=block_conf)
     source = SourceRef(doc_id=page.doc_id, page=page.number, quote=verified,
                        bbox=page.bbox(evidence))
     if verified is None:
@@ -263,8 +327,19 @@ def _classify(text: str) -> tuple[str, str | None]:
     return best_type, ", ".join(best_hits) if best_hits else None
 
 
+ISSUER_MAX_LEN = 90
+
+
 def _issuer(text: str) -> str:
+    """The office named on the page, if it names one.
+
+    Table rows are excluded: on the real register page the tehsil stamp bled the
+    word "तहसील" into a data cell, and matching an org marker anywhere would
+    have made the whole row the asker. A page that names no office says so.
+    """
     for ln in _lines(text):
+        if ln.startswith("|") or len(ln) > ISSUER_MAX_LEN:
+            continue
         low = ln.lower()
         if any(m.lower() in low for m in ORG_MARKERS):
             return ln.strip("#[]| ").strip()
@@ -293,11 +368,23 @@ def _deadline_line(text: str) -> tuple[str, str, str] | None:
     return None
 
 
+def _states_a_requirement(line: str) -> bool:
+    """A quote being ON the page does not make it a requirement.
+
+    The model, asked for requirements, will happily point at a table row: it is
+    real text, so the quote gate passes it, and a fabricated dependency lands in
+    the plan. A requirement has to be stated in words that assert one — and a
+    row of record data never is.
+    """
+    low = line.lower()
+    return "|" not in line and any(m.lower() in low for m in REQUIREMENT_MARKERS)
+
+
 def _requirements(text: str, page: Page) -> list[Requirement]:
     found: dict[str, Requirement] = {}
     for ln in _lines(text):
         low = ln.lower()
-        if not any(m.lower() in low for m in REQUIREMENT_MARKERS):
+        if not _states_a_requirement(ln):
             continue
         for key, markers in REQUIREMENT_KEY_MARKERS:
             if key in found or not any(m.lower() in low for m in markers):
@@ -349,9 +436,12 @@ def _amended_row(rows: list[dict[str, str]]) -> tuple[dict[str, str] | None, str
     """
     if len(rows) == 1:
         return rows[0], "the page carries a single record row"
-    # An Indian personal name in these columns runs 1-3 tokens. Four or more in
-    # one owner cell means the cell holds two names — i.e. a correction.
-    amended = [r for r in rows if len((r.get("owner_name") or "").split()) > 3]
+    # Sarvam marks a multi-line cell with <br/>, which _render turns into
+    # MULTIVALUE — the register page's struck-through-and-rewritten owner is
+    # exactly that. Token count is the fallback for pages with no such markup.
+    amended = [r for r in rows if MULTIVALUE in (r.get("owner_name") or "")]
+    if not amended:
+        amended = [r for r in rows if len((r.get("owner_name") or "").split()) > 3]
     if len(amended) == 1:
         return amended[0], ("the only row whose owner cell holds more than one "
                             "name — an overwritten or struck-through entry")
@@ -418,7 +508,7 @@ def _draft_for(page: Page, index: int, provenance: str) -> ObligationDraft:
         key, quote = str(item.get("key") or ""), item.get("quote")
         if key in prompts.REQUIREMENT_KEYS and key not in have:
             verified = _verify_quote(quote, text)
-            if verified:
+            if verified and _states_a_requirement(verified):
                 needs.append(Requirement(key=key, quote=verified,
                                          source=SourceRef(doc_id=page.doc_id,
                                                           page=page.number, quote=verified)))
@@ -437,8 +527,13 @@ def _draft_for(page: Page, index: int, provenance: str) -> ObligationDraft:
         name, value = str(item.get("name") or ""), item.get("value")
         if not name or not value or (name, value) in seen:
             continue
-        if rows and not row:
-            continue                    # unresolved row: the model may not pick one
+        if rows:
+            # A table is structured data we parse exactly, and one register page
+            # holds several DIFFERENT plots. Left to itself the model returns
+            # every row's owner — four names for one field, which the sequencer
+            # would rightly read as a blocking mismatch between readings that
+            # were never in conflict. Model identity fields are for prose pages.
+            continue
         if _verify_quote(item.get("quote") or str(value), text):
             identity.append(_reading(name, str(value), page, item.get("quote"), notes))
             seen.add((name, str(value)))
