@@ -1,5 +1,16 @@
 """Central config. Verified values only — anything marked VERIFY is an M0 task."""
 import os
+import pathlib
+
+# Load .env so a plain `uvicorn`, `pytest` or `python -m scripts.*` sees the key.
+# Without this, only `uvicorn --env-file .env` worked. Never commit a real key —
+# .env is gitignored; .env.example must stay empty.
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(pathlib.Path(__file__).resolve().parents[1] / ".env")
+except ImportError:  # python-dotenv ships with uvicorn[standard]; degrade quietly
+    pass
 
 SARVAM_BASE_URL = os.getenv("SARVAM_BASE_URL", "https://api.sarvam.ai")
 SARVAM_API_KEY = os.getenv("SARVAM_API_KEY", "")
