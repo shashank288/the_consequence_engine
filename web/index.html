@@ -4,98 +4,586 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>The Consequence Engine</title>
 <style>
-  :root{--bg:#0f1115;--card:#1a1e26;--tx:#e8eaf0;--mut:#8b93a7;--ok:#34c77b;--blk:#e05555;--unk:#c9a227;--dup:#7a86a8;--line:#2a3040}
-  *{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
-  header{padding:14px 22px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:baseline}
-  h1{font-size:18px;margin:0}small{color:var(--mut)}
-  main{max-width:1100px;margin:0 auto;padding:18px;display:grid;grid-template-columns:1.4fr 1fr;gap:16px}
-  section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px}
-  h2{font-size:13px;text-transform:uppercase;letter-spacing:.08em;color:var(--mut);margin:0 0 10px}
-  button{background:#2d6cdf;color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer}
+  :root{
+    --bg:#0f1115;--card:#1a1e26;--card2:#151922;--tx:#e8eaf0;--mut:#8b93a7;
+    --ok:#34c77b;--ok-d:#12351f;--ok-b:#1d5c36;--blk:#e05555;--blk-b:#5c2d3d;--unk:#c9a227;
+    --dup:#7a86a8;--line:#2a3040;--quote:#ffd479;--accent:#2d6cdf;--mem:#5aa9f0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{font:15px/1.5 system-ui,Segoe UI,sans-serif;background:var(--bg);color:var(--tx)}
+  header{padding:10px 22px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  h1{font-size:18px;margin:0}
+  header small{color:var(--mut)}
+  .spacer{flex:1}
+  main{max-width:1240px;margin:0 auto;padding:14px 18px 40px}
+  section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:14px}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--mut);margin:0 0 10px}
+  button{background:var(--accent);color:#fff;border:0;border-radius:8px;padding:8px 14px;font-size:14px;cursor:pointer}
+  button:hover{filter:brightness(1.12)}
   button.ghost{background:transparent;border:1px solid var(--line);color:var(--tx)}
-  .item{border:1px solid var(--line);border-left:4px solid var(--mut);border-radius:8px;padding:10px 12px;margin:8px 0}
-  .item.actionable{border-left-color:var(--ok)} .item.blocked{border-left-color:var(--blk)}
-  .item.unknown{border-left-color:var(--unk)} .item.duplicate,.item.done{border-left-color:var(--dup);opacity:.65}
-  .badge{font-size:11px;padding:2px 8px;border-radius:99px;background:#242a36;color:var(--mut);margin-left:8px}
-  .nsa{background:#12351f;border:1px solid #1d5c36;border-radius:10px;padding:12px;margin-bottom:12px}
+  button:disabled{opacity:.45;cursor:not-allowed;filter:none}
+  input,select{background:#12151c;border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px;font-size:13px}
+
+  /* ---------- HERO 1 : DO THIS FIRST — biggest element on the page ---------- */
+  #banner{display:none;background:linear-gradient(135deg,#12351f,#0f2a19);border:2px solid var(--ok-b);
+    border-radius:14px;padding:16px 22px;margin-bottom:14px;box-shadow:0 0 0 1px #0b2414,0 8px 28px #0006}
+  #banner.show{display:block}
+  #banner .kick{font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--ok);font-weight:800}
+  #banner .act{font-size:28px;line-height:1.18;font-weight:700;margin:5px 0 3px}
+  #banner .act.long{font-size:20px;line-height:1.3}
+  #banner .meta{color:#a8d8bd;font-size:13.5px}
+  #banner .papers{margin-top:9px;font-size:13px;color:#bfe6d0;display:flex;gap:7px;align-items:baseline;flex-wrap:wrap}
+  #banner .unblocks{margin-top:8px;display:flex;gap:7px;align-items:center;flex-wrap:wrap;font-size:13px;color:#bfe6d0}
+  #banner .chip{background:#0c2416;border:1px solid var(--ok-b);border-radius:99px;padding:3px 10px;font-weight:600}
+  #banner .chip.doc{background:#0c2416;color:#d7f0e2;font-weight:500}
+  #banner .chip.miss{background:#3a1e26;border-color:var(--blk-b);color:#f0899b}
+  /* honest "nothing can start" variant — never blank, never an error */
+  #banner.halt{background:linear-gradient(135deg,#33290f,#241c09);border-color:#6b5410}
+  #banner.halt .kick{color:var(--unk)}
+  #banner.halt .meta,#banner.halt .papers,#banner.halt .unblocks{color:#e0cf9a}
+  #banner.halt .chip{background:#2a2109;border-color:#6b5410}
+
+  /* ---------- HERO 2 : the dependency, drawn ---------- */
+  #rail{display:flex;align-items:stretch;overflow-x:auto;padding:10px 2px 8px}
+  .node{display:flex;align-items:stretch}
+  .rcard{position:relative;flex:0 0 296px;min-width:296px;border:1px solid var(--line);border-radius:12px;
+    padding:12px 13px;background:var(--card2);transition:box-shadow .25s,border-color .25s,opacity .25s,transform .25s}
+  .rcard .step{position:absolute;top:10px;right:11px;font-size:10.5px;font-weight:800;letter-spacing:.08em;color:var(--mut)}
+  .rcard .idchip{display:inline-block;font-size:11.5px;font-weight:800;letter-spacing:.05em;background:#242a36;
+    color:var(--mut);border-radius:6px;padding:2px 7px;margin-right:6px}
+  .rcard .st{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:800}
+  .rcard .title{font-size:14.5px;font-weight:600;margin:8px 0 4px}
+  .rcard .who{color:var(--mut);font-size:12px}
+  /* actionable = the one bright thing on screen */
+  .rcard.actionable{border-color:var(--ok);background:linear-gradient(180deg,#16241c,#141a20);
+    box-shadow:0 0 0 1px var(--ok-b),0 6px 20px #0007}
+  .rcard.actionable .st{color:var(--ok)}
+  .rcard.actionable .idchip{background:var(--ok-d);color:var(--ok)}
+  .rcard .startpill{position:absolute;top:-11px;left:12px;background:var(--ok);color:#052;font-weight:800;
+    font-size:11px;letter-spacing:.06em;border-radius:99px;padding:2px 9px}
+  /* blocked = visibly downstream and greyed */
+  .rcard.blocked{border-color:#3a2530;opacity:.74;filter:saturate(.72)}
+  .rcard.blocked .st{color:var(--blk)}
+  .rcard.blocked .title{color:#c8ccd8}
+  .rcard.done{border-color:var(--dup);opacity:.6}
+  .rcard.done .st{color:var(--dup)}
+  /* highlighted because a downstream card points at it */
+  .rcard.hl{opacity:1;filter:none;transform:translateY(-2px);
+    box-shadow:0 0 0 2px var(--quote),0 8px 26px #0008;border-color:var(--quote)}
+
+  /* the inline lock — the quoted reason, printed ON the blocked card */
+  .lock{margin-top:10px;border-top:1px dashed #3a2530;padding-top:8px;font-size:12.5px}
+  .lock+.lock{margin-top:8px}
+  .lock .lk{color:var(--blk);font-weight:700;cursor:help}
+  .lock .lk .bid{text-decoration:underline dotted}
+  .lock .need{font-size:10.5px;font-weight:700;letter-spacing:.04em;background:#3a1e26;color:#f0899b;
+    border-radius:5px;padding:1px 6px;margin-left:5px;white-space:nowrap}
+  .lock .q{color:var(--quote);font-style:italic;display:block;margin:5px 0 3px;
+    border-left:3px solid #6b5b28;padding-left:8px;line-height:1.42}
+  .lock .src{color:var(--mut);font-size:11.5px}
+  .lock .src b{color:#aab3c6;font-weight:600}
+  .lock .also{color:var(--mut);font-size:11px;margin-top:4px}
+  .lock .also span{border-bottom:1px dotted #4a5163;cursor:help}
+  .lock .tail{color:#9aa3b6;font-size:11.5px;margin-top:4px}
+  /* waived cycle edge: actionable AND edged — honest amber, not a red lock */
+  .lock.waived{border-top-color:#6b5410}
+  .lock.waived .lk{color:var(--unk)}
+  .lock.waived .need{background:#2a2109;color:#e0cf9a}
+  .lock.waived .q{border-left-color:#6b5410}
+  .donemark{margin-top:10px;color:var(--dup);font-size:12.5px}
+
+  /* connector between cards: named with the requirement key */
+  .conn{flex:0 0 auto;display:flex;flex-direction:column;justify-content:center;align-items:center;
+    padding:0 6px;min-width:78px;align-self:center}
+  .conn .ln{display:flex;align-items:center;width:100%}
+  .conn .bar{flex:1;height:2px;background:var(--line)}
+  .conn .tip{font-size:17px;line-height:1;color:var(--mut);margin-left:-2px}
+  .conn .lbl{font-size:9.5px;letter-spacing:.03em;color:var(--mut);margin-top:5px;text-align:center;
+    max-width:86px;word-break:break-word;line-height:1.25}
+  .conn.blocking .bar{background:linear-gradient(90deg,var(--ok),var(--blk))}
+  .conn.blocking .tip{color:var(--blk)}
+  .conn.blocking .lbl{color:#c98b96}
+  .conn.satisfied .bar{background:var(--ok-b)} .conn.satisfied .tip{color:var(--ok)}
+
+  /* re-sequence + propagation feedback */
+  @keyframes flash{0%{box-shadow:0 0 0 1px var(--ok-b)}18%{box-shadow:0 0 0 2px var(--ok),0 0 34px #34c77b99}
+    100%{box-shadow:0 0 0 1px var(--ok-b)}}
+  .rcard.flash{animation:flash 1.7s ease-out}
+  @keyframes mempulse{0%{box-shadow:0 0 0 0 #5aa9f000}20%{box-shadow:0 0 0 2px var(--mem),0 0 28px #5aa9f077}
+    100%{box-shadow:0 0 0 0 #5aa9f000}}
+  .rcard.pulse{animation:mempulse 2s ease-out}
+  .tag{position:absolute;top:-11px;right:12px;font-weight:800;font-size:11px;border-radius:99px;padding:2px 9px;
+    animation:fade 2.6s forwards}
+  .tag.reseq{background:var(--ok);color:#052}
+  .tag.prop{background:var(--mem);color:#04203a}
+  @keyframes fade{0%,62%{opacity:1}100%{opacity:0}}
+
+  /* ---------- memory / diff evidence ---------- */
+  #memsec{display:none}
+  #memsec.show{display:block}
+  .dsum{background:#0f1f30;border:1px solid #24466b;border-left:4px solid var(--mem);border-radius:8px;
+    padding:11px 13px;font-size:15px;line-height:1.45}
+  .dchips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+  .dchip{font-size:11.5px;border-radius:99px;padding:3px 10px;background:#242a36;color:#aab3c6;border:1px solid var(--line)}
+  .dchip.on{background:#0f2a19;color:#7fdba0;border-color:var(--ok-b)}
+  .dchip.mem{background:#0f1f30;color:#9ccbf5;border-color:#24466b}
+  .dcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px;margin-top:11px}
+  .dob{border:1px solid var(--line);border-radius:8px;padding:9px 11px;background:var(--card2);font-size:12.5px}
+  .dob .h{font-weight:700;margin-bottom:4px}
+  .dob ul{margin:0;padding-left:17px;color:#aab3c6}
+  .dnote{margin-top:10px;font-size:12.5px;color:#9aa3b6;font-style:italic}
+  .dlog{margin-top:10px;font-size:12px;color:var(--mut)}
+  .dlog div{padding:3px 0;border-top:1px dashed var(--line)}
+
+  /* ---------- escalation / refusals ---------- */
+  .refusal{background:#33202a;border:1px solid var(--blk-b);border-radius:10px;padding:10px 12px;margin:8px 0;display:flex;gap:12px}
+  .refusal .body{flex:1}
+  .refusal .hd{font-weight:700}
+  .refusal .sub{color:#e3b7c4;font-size:13px;margin:2px 0}
+  .refusal .fix{color:#9fb0c9;font-size:12.5px;font-style:italic;margin-top:6px}
+  .refusal .src{color:var(--mut);font-size:12px;margin-top:6px}
+  .crop{flex:0 0 auto;width:120px;height:86px;border-radius:8px;object-fit:cover;border:1px solid var(--blk-b);background:#1b1015}
+  .cropph{flex:0 0 auto;width:120px;height:86px;border-radius:8px;border:1px dashed var(--blk-b);background:#1b1015;
+    display:flex;align-items:center;justify-content:center;color:#7a5060;font-size:11px;text-align:center;padding:4px}
+
+  /* ---------- side buckets, mismatches, misc ---------- */
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px;align-items:start}
+  .mini{display:flex;gap:8px;flex-wrap:wrap}
+  .mini .m{border:1px solid var(--line);border-radius:8px;padding:7px 10px;background:var(--card2);font-size:12.5px;min-width:150px}
+  .mini .m.dup{border-left:3px solid var(--dup)} .mini .m.unk{border-left:3px solid var(--unk)}
+  .mini .m .idchip{font-size:10px;font-weight:700;color:var(--mut);background:#242a36;border-radius:5px;padding:1px 6px;margin-right:5px}
   .edge{border-top:1px dashed var(--line);margin-top:8px;padding-top:8px;font-size:13.5px}
-  .quote{color:#ffd479;font-style:italic}
-  .refusal{background:#33202a;border:1px solid #5c2d3d;border-radius:8px;padding:8px 10px;margin:6px 0;font-size:13.5px}
-  input{background:#12151c;border:1px solid var(--line);color:var(--tx);border-radius:6px;padding:6px 8px}
-  #log{font-size:12px;color:var(--mut);white-space:pre-wrap}
+  .badge{font-size:11px;padding:2px 8px;border-radius:99px;background:#242a36;color:var(--mut);margin-left:6px}
+  .badge.blocking{background:#3a1e26;color:#f0899b} .badge.cosmetic{background:#233a2a;color:#7fdba0}
+  .badge.unknown{background:#2a2109;color:#e0cf9a}
+  .targets{border:1px solid var(--blk-b);background:#2a1820;border-radius:8px;padding:9px 11px;margin-top:9px;font-size:12.5px}
+  .targets .t{padding:4px 0;border-top:1px dashed var(--blk-b);cursor:pointer;color:#e3b7c4}
+  .targets .t:hover{color:var(--tx)}
+  .targets .t code{color:var(--quote)}
+
+  /* upload dropzone */
+  #drop{border:1.5px dashed var(--line);border-radius:10px;padding:14px;text-align:center;color:var(--mut);
+    font-size:13px;cursor:pointer;transition:.15s}
+  #drop.hot{border-color:var(--accent);color:var(--tx);background:#141b2b}
+  #thumbs{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+  .thumb{width:74px;text-align:center;font-size:10.5px;color:var(--mut)}
+  .thumb img{width:74px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--line);display:block}
+  .thumb .ph{width:74px;height:56px;border-radius:6px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center}
+  .thumb .stt{margin-top:3px}
+  .thumb .stt.proc{color:var(--unk)} .thumb .stt.wait{color:var(--blk)} .thumb .stt.ok{color:var(--ok)}
+  .spin{display:inline-block;width:10px;height:10px;border:2px solid #ffffff40;border-top-color:var(--unk);
+    border-radius:50%;animation:sp .7s linear infinite;vertical-align:-1px;margin-right:3px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  #log{font-size:12px;color:var(--mut);white-space:pre-wrap;max-height:120px;overflow:auto;margin-top:8px}
+  .empty{color:var(--mut);font-size:13px}
 </style>
 </head>
 <body>
-<header><h1>⚖️ The Consequence Engine</h1><small>photograph the stack → one next action, nothing guessed</small></header>
+<header>
+  <h1>⚖️ The Consequence Engine</h1>
+  <small>photograph the stack → one safe next action, nothing guessed</small>
+  <span class="spacer"></span>
+  <select id="resume" title="Reload a saved case from disk — same plan, fresh process">
+    <option value="">Resume saved case…</option>
+  </select>
+  <button class="ghost" id="resetbtn" onclick="resetCase()" disabled title="Back to as-loaded state">⟲ Reset case</button>
+  <button onclick="loadFixture()">Load demo case</button>
+</header>
+
 <main>
-  <div>
-    <section>
-      <h2>Case</h2>
-      <button onclick="loadFixture()">Load demo case (staged)</button>
-      <input type="file" id="files" multiple accept="image/*,.pdf" style="margin-left:8px">
-      <button class="ghost" onclick="uploadDocs()">Upload photographed stack</button>
-      <div id="nsa"></div>
-      <div id="plan"></div>
-    </section>
-    <section>
-      <h2>Why blocked — evidence quoted from the pages</h2>
-      <div id="edges"></div>
-    </section>
-  </div>
-  <div>
-    <section>
-      <h2>Escalation queue — refused, not guessed</h2>
-      <div id="refusals"></div>
-    </section>
-    <section>
-      <h2>Name / identity mismatches (record vs ID)</h2>
-      <div id="mismatches"></div>
-      <div style="margin-top:10px">
-        <input id="cfield" placeholder="field e.g. owner_name" size="14">
-        <input id="cdoc" placeholder="doc_id" size="14">
-        <input id="cnew" placeholder="corrected value" size="16">
-        <button class="ghost" onclick="correct()">Correct → propagate</button>
-      </div>
-    </section>
-    <section>
-      <h2>Mock tehsil status</h2>
-      <button class="ghost" onclick="markDone('record_name_matches_id')">Mark record corrected ✓</button>
-      <div id="log"></div>
-    </section>
+  <!-- HERO 1 : the promise -->
+  <div id="banner"></div>
+
+  <!-- HERO 2 : the dependency, drawn -->
+  <section id="railsec" style="display:none">
+    <h2>The plan is a chain, not a list — do the green one, the rest are waiting on it</h2>
+    <div id="rail"></div>
+    <div id="buckets"></div>
+  </section>
+
+  <!-- Memory evidence: what a correction actually moved -->
+  <section id="memsec">
+    <h2>Memory — what that correction changed across the case</h2>
+    <div id="membody"></div>
+  </section>
+
+  <div class="grid">
+    <div>
+      <section>
+        <h2>Escalation queue — refused, not guessed</h2>
+        <div id="refusals"><div class="empty">Load a case to see the plan.</div></div>
+      </section>
+      <section>
+        <h2>Name / identity mismatches (record vs ID)</h2>
+        <div id="mismatches"></div>
+        <div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap;align-items:center">
+          <input id="cdoc" placeholder="doc_id" size="16" value="record_page_1947">
+          <input id="cfield" placeholder="field" size="12" value="owner_name">
+          <input id="cnew" placeholder="corrected value" size="16" value="SUSHILA DEVI">
+          <button class="ghost" onclick="correct()">Correct → propagate</button>
+        </div>
+        <div id="targets"></div>
+      </section>
+    </div>
+    <div>
+      <section>
+        <h2>Upload photographed stack</h2>
+        <div id="drop">📷 Drag &amp; drop the paper stack here — or click to choose
+          <input type="file" id="files" multiple accept="image/*,.pdf" hidden></div>
+        <div id="thumbs"></div>
+      </section>
+      <section>
+        <h2>Mock tehsil status &amp; activity</h2>
+        <button class="ghost" onclick="markDone('record_name_matches_id')">Mark record corrected ✓</button>
+        <div id="log"></div>
+      </section>
+    </div>
   </div>
 </main>
+
 <script>
 let CASE=null;
+let PREV={};                 // obligation_id -> previous state, drives the re-sequence flash
 const $=id=>document.getElementById(id);
+const pretty=s=>(s||'').replace(/_/g,' ');
+const esc=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+             .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 const say=t=>{$('log').textContent=(new Date().toLocaleTimeString())+"  "+t+"\n"+$('log').textContent};
-async function loadFixture(){const r=await fetch('/api/case/fixture/demo',{method:'POST'});render(await r.json());say('demo case loaded')}
-async function uploadDocs(){
-  const fd=new FormData();for(const f of $('files').files)fd.append('files',f);
-  const r=await fetch('/api/case',{method:'POST',body:fd});
-  if(r.status===501){say('extraction pipeline not merged yet — use demo case');return}
-  render(await r.json())
+const hl=(id,on)=>{const el=$('rc-'+id); if(el) el.classList.toggle('hl',on)};
+
+/* ---------------- data loading ---------------- */
+async function loadFixture(){
+  try{
+    const r=await fetch('/api/case/fixture/demo',{method:'POST'});
+    if(!r.ok){say('fixture load failed: '+r.status);return;}
+    const c=await r.json();
+    $('memsec').classList.remove('show'); $('targets').innerHTML='';
+    PREV={}; render(c,{cause:'load'});
+    say('demo case loaded — '+c.plan.items.length+' items, '+c.plan.edges.length+' blocking edge(s), '
+        +c.plan.refusals.length+' refusal(s)');
+    listCases();
+  }catch(e){say('fixture load failed: '+e)}
 }
-async function markDone(key){if(!CASE)return;const r=await fetch(`/api/case/${CASE.id}/status/${key}`,{method:'POST'});render(await r.json());say('status lookup: '+key+' now satisfied → plan re-sequenced')}
-async function correct(){if(!CASE)return;
-  const body={doc_id:$('cdoc').value,field_name:$('cfield').value,new:$('cnew').value};
-  const r=await fetch(`/api/case/${CASE.id}/correct`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
-  const c=await r.json();render(c);
-  const last=c.corrections[c.corrections.length-1];
-  say(`correction propagated to: ${last.propagated_to.join(', ')}`)}
-function render(c){CASE=c;const p=c.plan;if(!p)return;
-  const byId=Object.fromEntries(c.drafts.map(d=>[d.id,d]));
-  $('nsa').innerHTML=p.next_single_action?`<div class="nsa"><b>DO THIS FIRST →</b> ${p.next_single_action}</div>`:'';
-  $('plan').innerHTML=p.items.sort((a,b)=>(a.order??99)-(b.order??99)).map(i=>{
-    const d=byId[i.obligation_id]||{};
-    return `<div class="item ${i.state}"><b>${d.asked_what||i.obligation_id}</b>
-      <span class="badge">${i.state}${i.duplicate_of?' of '+i.duplicate_of:''}</span>
-      <div><small>${d.asked_by||''} ${d.due&&d.due.value?('· due '+d.due.value):''}</small></div></div>`}).join('');
-  $('edges').innerHTML=p.edges.map(e=>`<div class="edge"><b>${e.blocked_id}</b> is blocked by <b>${e.blocker_id}</b><br>
-      <span class="quote">${e.reason}</span><br><small>evidence: ${e.evidence.map(s=>s.doc_id+(s.quote?` — “${s.quote}”`:'')).join(' · ')}</small></div>`).join('')||'<small>no blocking edges</small>';
-  $('refusals').innerHTML=p.refusals.map(r=>`<div class="refusal">✋ <b>${r.name}</b> — cannot be read safely (conf ${r.confidence}). Routed to human review.<br><small>${r.source?r.source.doc_id:''} ${r.source&&r.source.quote?'· '+r.source.quote:''}</small></div>`).join('')||'<small>nothing refused</small>';
-  $('mismatches').innerHTML=p.mismatches.map(m=>`<div class="edge"><b>${m.field_name}</b>: ${m.readings.map(r=>`“${r.value}”`).join(' vs ')}
-      <span class="badge">${m.classification}</span><br><small>${m.reason}</small></div>`).join('')||'<small>none found</small>';
+async function openCase(id){
+  if(!id)return;
+  const r=await fetch('/api/case/'+encodeURIComponent(id));
+  if(!r.ok){say('could not reload '+id+' ('+r.status+')');return;}
+  const c=await r.json();
+  PREV={}; render(c,{cause:'load'});
+  say('reloaded '+id+' from disk — plan re-served identically, '+(c.corrections||[]).length+' correction(s) remembered');
+  renderMemory(null,c.correction_log||[]);
 }
+async function resetCase(){
+  if(!CASE)return;
+  const r=await fetch(`/api/case/${CASE.id}/reset`,{method:'POST'});
+  if(!r.ok){say('reset failed: '+r.status);return;}
+  $('memsec').classList.remove('show'); $('targets').innerHTML='';
+  PREV={}; render(await r.json(),{cause:'load'});
+  say('case reset to as-loaded state — ready for another run');
+  listCases();
+}
+async function markDone(key){
+  if(!CASE){say('load a case first');return;}
+  const r=await fetch(`/api/case/${CASE.id}/status/${encodeURIComponent(key)}`,{method:'POST'});
+  if(!r.ok){say('status lookup failed: '+r.status);return;}
+  render(await r.json(),{cause:'reseq'});
+  say('tehsil status: '+pretty(key)+' satisfied → plan re-sequenced');
+}
+async function correct(){
+  if(!CASE){say('load a case first');return;}
+  const body={doc_id:$('cdoc').value.trim(),field_name:$('cfield').value.trim(),new:$('cnew').value.trim()};
+  const r=await fetch(`/api/case/${CASE.id}/correct`,{method:'POST',
+    headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const c=await r.json();
+  if(!r.ok){ renderTargets(c); say('correction refused — no such reading; showing what can be corrected'); return; }
+  $('targets').innerHTML='';
+  render(c,{cause:'correct',touched:(c.diff&&c.diff.propagated_to)||[]});
+  renderMemory(c.diff,c.correction_log||[]);
+  const prop=((c.last_correction||{}).propagated_to)||[];
+  say('correction propagated to: '+(prop.join(', ')||'nothing — value recorded, plan unchanged'));
+}
+async function listCases(){
+  try{
+    const rows=await (await fetch('/api/cases')).json();
+    $('resume').innerHTML='<option value="">Resume saved case…</option>'+rows.map(x=>
+      `<option value="${esc(x.id)}">${esc(x.id)} · ${x.item_count} items · ${x.refusal_count} refused · ${x.correction_count} corr.</option>`
+    ).join('');
+  }catch(e){/* listing is a convenience, never block the demo */}
+}
+$('resume').addEventListener('change',e=>{openCase(e.target.value); e.target.value='';});
+
+/* --------- dependency depth: how far downstream each card sits --------- */
+function railOrder(items,edges){
+  const byId={}; items.forEach(i=>byId[i.obligation_id]=i);
+  const eby={}; edges.forEach(e=>(eby[e.blocked_id]=eby[e.blocked_id]||[]).push(e));
+  function depth(id,seen){
+    const it=byId[id];
+    if(!it||it.state!=='blocked') return 0;          // only a blocked item pushes things right
+    seen=seen||new Set(); if(seen.has(id)) return 0; // cycle guard
+    seen.add(id);
+    let d=0; (eby[id]||[]).forEach(e=>d=Math.max(d,1+depth(e.blocker_id,seen)));
+    return d||1;
+  }
+  const rank=i=>i.state==='done'?-1:(i.order==null?99:i.order);  // finished steps stay on the left
+  return items
+    .filter(i=>['actionable','blocked','done'].includes(i.state))
+    .map(i=>({i,d:depth(i.obligation_id)}))
+    .sort((a,b)=>a.d-b.d || rank(a.i)-rank(b.i) || a.i.obligation_id.localeCompare(b.i.obligation_id))
+    .map(x=>x.i);
+}
+
+/* the tail of an edge reason after its leading quote: "…" — required by X; not yet satisfied */
+function reasonTail(reason){
+  const m=/^\s*"[^"]*"\s*[—-]\s*(.+)$/.exec(reason||'');
+  return m?m[1]:(reason||'');
+}
+
+/* one inline lock block, printed on the card itself */
+function lockHtml(e,waived){
+  const ev=(e.evidence&&e.evidence[0])||{};
+  const rest=(e.evidence||[]).slice(1).filter(s=>s&&s.doc_id);
+  const quote=ev.quote||e.reason||'';
+  const icon=waived?'⚠':'🔒';
+  const verb=waived?'waived loop with':'blocked by';
+  return `<div class="lock${waived?' waived':''}">
+    <span class="lk" onmouseenter="hl('${esc(e.blocker_id)}',true)" onmouseleave="hl('${esc(e.blocker_id)}',false)"
+      >${icon} ${verb} <span class="bid">${esc(e.blocker_id)}</span></span
+    ><span class="need">${esc(e.need_key)}</span>
+    <span class="q">“${esc(quote)}”</span>
+    <span class="src">source: <b>${esc(ev.doc_id||'—')}</b>${ev.page?' · p'+esc(ev.page):''}</span>
+    ${rest.length?`<div class="also">also evidenced on ${rest.map(s=>
+        `<span title="${esc(s.quote||'')}">${esc(s.doc_id)}</span>`).join(', ')}</div>`:''}
+    ${waived?`<div class="tail">${esc(e.reason||'')}</div>`
+            :`<div class="tail">${esc(reasonTail(e.reason))}</div>`}
+  </div>`;
+}
+
+/* ---------------- render ---------------- */
+function render(c,opts){
+  opts=opts||{};
+  const p=c.plan; if(!p) return;
+  const prev=PREV; CASE=c;
+  const touched=new Set(opts.touched||[]);
+  const byId=Object.fromEntries((c.drafts||[]).map(d=>[d.id,d]));
+  const eby={}; p.edges.forEach(e=>(eby[e.blocked_id]=eby[e.blocked_id]||[]).push(e));
+  $('resetbtn').disabled=false;
+
+  /* --- HERO 1: the banner. next_single_action is never null — always print it. --- */
+  const firstItem=p.items.find(i=>i.state==='actionable'&&i.order===1)
+                 ||p.items.find(i=>i.state==='actionable');
+  const act=p.next_single_action||(firstItem&&(firstItem.next_action||(byId[firstItem.obligation_id]||{}).asked_what))||'';
+  const b=$('banner');
+  if(firstItem){
+    const d=byId[firstItem.obligation_id]||{};
+    const papers=[...new Set([d.doc_id,
+      ...((d.identity_fields||[]).map(f=>f.source&&f.source.doc_id)),
+      d.due&&d.due.source&&d.due.source.doc_id].filter(Boolean))];
+    const missing=firstItem.needs_docs||[];
+    const downstream=p.items.filter(i=>i.state==='blocked').map(i=>i.obligation_id);
+    const due=d.due&&d.due.status==='read'&&d.due.value?d.due.value:null;
+    b.className='show';
+    b.innerHTML=
+      `<div class="kick">✅ Do this first — ${esc(firstItem.obligation_id)}</div>
+       <div class="act${act.length>110?' long':''}">${esc(act)}</div>
+       <div class="meta">${d.asked_by?'At: '+esc(d.asked_by):''}${due?' · stated deadline '+esc(due):''}</div>
+       ${papers.length?`<div class="papers"><span>Papers to carry:</span>
+          ${papers.map(x=>`<span class="chip doc">${esc(pretty(x))}</span>`).join('')}
+          ${missing.map(x=>`<span class="chip miss">still missing: ${esc(pretty(x))}</span>`).join('')}</div>`:''}
+       ${downstream.length?`<div class="unblocks">Completing <b>${esc(firstItem.obligation_id)}</b> unblocks
+          ${downstream.map(x=>`<span class="chip">${esc(x)}</span>`).join('<span style="color:#4d7a5e">→</span>')}</div>`:''}`;
+  } else {
+    /* honest sentence, not an error and not a blank banner */
+    b.className='show halt';
+    b.innerHTML=`<div class="kick">⛔ Nothing can be started yet — here is why</div>
+       <div class="act${act.length>110?' long':''}">${esc(act)}</div>
+       <div class="meta">No item is startable from the papers supplied. This is a refusal to guess, not a failure to read.</div>`;
+  }
+
+  /* --- HERO 2: the rail --- */
+  $('railsec').style.display='block';
+  const chain=railOrder(p.items,p.edges);
+  $('rail').innerHTML=chain.map((it,idx)=>{
+    const d=byId[it.obligation_id]||{};
+    const changed=prev[it.obligation_id]&&prev[it.obligation_id]!==it.state
+                  &&(it.state==='actionable'||it.state==='done');
+    const edges=eby[it.obligation_id]||[];
+    /* an item can be actionable AND carry edges — a deterministically waived cycle */
+    const waived=it.state!=='blocked';
+    let inner='';
+    if(edges.length&&it.state!=='done'){
+      inner=edges.map(e=>lockHtml(e,waived)).join('');
+    }
+    if(it.state==='done'){
+      inner=`<div class="donemark">✓ satisfied — no longer blocking downstream</div>`;
+    } else if(it.state==='actionable'&&!edges.length){
+      const due=d.due&&d.due.status==='read'&&d.due.value?d.due.value:null;
+      inner=`<div class="donemark" style="color:var(--ok)">▶ ready now${due?' · due '+esc(due):''}</div>`;
+    }
+    /* connector carries the requirement key that ties these two cards together */
+    let conn='';
+    if(idx>0){
+      const from=chain[idx-1];
+      const link=edges.find(e=>e.blocker_id===from.obligation_id);
+      const cls=link?(it.state==='blocked'?'blocking':'satisfied'):(from.state==='done'?'satisfied':'');
+      const lbl=link?`needs<br>${esc(link.need_key)}`:(from.state==='done'?'requirement<br>satisfied':'');
+      conn=`<div class="conn ${cls}"><div class="ln"><div class="bar"></div><div class="tip">▶</div></div>
+        ${lbl?`<div class="lbl">${lbl}</div>`:''}</div>`;
+    }
+    const tag=changed?(opts.cause==='reseq'?'<span class="tag reseq">↻ re-sequenced</span>'
+                      :opts.cause==='correct'?'<span class="tag prop">↺ updated</span>':''):
+              (touched.has(it.obligation_id)?'<span class="tag prop">↺ updated</span>':'');
+    const anim=changed&&opts.cause==='reseq'?' flash':(touched.has(it.obligation_id)||(changed&&opts.cause==='correct')?' pulse':'');
+    return `<div class="node">${conn}<div class="rcard ${esc(it.state)}${anim}" id="rc-${esc(it.obligation_id)}">
+        ${it.state==='actionable'&&it.order===1?'<span class="startpill">START HERE</span>':''}
+        ${tag}
+        <div class="step">STEP ${idx+1}</div>
+        <div><span class="idchip">${esc(it.obligation_id)}</span><span class="st">${esc(it.state)}</span></div>
+        <div class="title">${esc(d.asked_what||it.obligation_id)}</div>
+        <div class="who">${esc(d.asked_by||'')}</div>
+        ${inner}
+      </div></div>`;
+  }).join('')||'<div class="empty">no sequenced items</div>';
+
+  /* --- duplicate + unknown buckets: surfaced, never dropped --- */
+  const dups=p.items.filter(i=>i.state==='duplicate');
+  const unks=p.items.filter(i=>i.state==='unknown');
+  $('buckets').innerHTML=(dups.length||unks.length)?
+    `<div style="margin-top:10px" class="mini">
+      ${dups.map(i=>{const d=byId[i.obligation_id]||{};
+        return `<div class="m dup"><span class="idchip">${esc(i.obligation_id)}</span>duplicate of ${esc(i.duplicate_of)}
+          <div style="color:var(--mut);margin-top:3px">${esc(d.asked_what||'')}</div></div>`;}).join('')}
+      ${unks.map(i=>{const d=byId[i.obligation_id]||{};
+        return `<div class="m unk"><span class="idchip">${esc(i.obligation_id)}</span>unknown — needs a human
+          <div style="color:var(--mut);margin-top:3px">${esc(d.asked_what||d.raw_excerpt||'')}</div></div>`;}).join('')}
+    </div>`:'';
+
+  /* --- escalation queue with field crops --- */
+  $('refusals').innerHTML=p.refusals.length? p.refusals.map((r,i)=>{
+    const s=r.source||{};
+    const crop=s.crop_path
+      ? `<img class="crop" id="crop-${i}" src="${esc(s.crop_path)}" alt="crop of the ${esc(pretty(r.name))} field">`
+      : `<div class="cropph">🔍 no crop<br>supplied</div>`;
+    return `<div class="refusal">${crop}
+      <div class="body">
+        <div class="hd">✋ ${esc(pretty(r.name))} — cannot be read safely.</div>
+        <div class="sub">Read at ${(r.confidence||0).toFixed(2)} confidence, below the refusal threshold.
+          Routed to human review — not guessed, not silently dropped.</div>
+        <div class="src">${esc(pretty(s.doc_id||''))}${s.page?' · p'+esc(s.page):''}${s.quote?` · “${esc(s.quote)}”`:''}</div>
+        <div class="fix">↻ Re-photograph this page straight-on in daylight to resolve.</div>
+      </div></div>`;
+  }).join('') : '<div class="empty">nothing refused — every consequential field read with confidence.</div>';
+  /* crops may live under fixtures/ (not served) or web/crops/ — degrade, never break the panel */
+  p.refusals.forEach((r,i)=>{
+    const img=$('crop-'+i); if(!img) return;
+    const base=((r.source||{}).crop_path||'').split('/').pop();
+    img.dataset.alt='/crops/'+base;
+    img.onerror=function(){
+      if(this.dataset.alt&&!this.dataset.tried){this.dataset.tried='1';this.src=this.dataset.alt;return;}
+      this.outerHTML='<div class="cropph">🔍 field crop<br>not published</div>';
+    };
+  });
+
+  /* --- mismatches --- */
+  $('mismatches').innerHTML=p.mismatches.length? p.mismatches.map(m=>
+    `<div class="edge"><b>${esc(pretty(m.field_name))}</b>:
+       ${m.readings.map(r=>`“${esc(r.value)}”<small style="color:var(--mut)"> (${esc(r.source?pretty(r.source.doc_id):'?')})</small>`).join(' vs ')}
+       <span class="badge ${esc(m.classification)}">${esc(m.classification)}</span><br>
+       <small style="color:var(--mut)">${esc(m.reason)}</small></div>`
+  ).join('') : '<div class="empty">no identity conflicts.</div>';
+
+  PREV={}; p.items.forEach(i=>PREV[i.obligation_id]=i.state);
+}
+
+/* --------- memory panel: the diff, printed as the engine wrote it --------- */
+function renderMemory(diff,log){
+  const parts=[];
+  if(diff){
+    const unblocked=(diff.obligations||[]).filter(o=>o.state_before==='blocked'&&o.state_after==='actionable');
+    parts.push(`<div class="dsum">${esc(diff.summary||'')}</div>`);
+    parts.push(`<div class="dchips">
+      ${chip('propagated to '+((diff.propagated_to||[]).join(', ')||'nothing'),(diff.propagated_to||[]).length,'mem')}
+      ${chip((diff.mismatches_cleared||[]).length+' mismatch cleared',(diff.mismatches_cleared||[]).length)}
+      ${chip((diff.refusals_cleared||[]).length+' refusal cleared',(diff.refusals_cleared||[]).length)}
+      ${chip((diff.edges_removed||[]).length+' blocking edge removed',(diff.edges_removed||[]).length)}
+      ${chip((diff.edges_added||[]).length+' blocking edge added',(diff.edges_added||[]).length)}
+    </div>`);
+    if((diff.obligations||[]).length){
+      parts.push(`<div class="dcols">${diff.obligations.map(o=>
+        `<div class="dob"><div class="h">${esc(o.obligation_id)}
+           <span class="badge">${esc(o.state_before)} → ${esc(o.state_after)}</span></div>
+           <ul>${(o.changes||[]).map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`).join('')}</div>`);
+    }
+    parts.push(`<div class="dnote">${unblocked.length
+      ? esc(unblocked.map(o=>o.obligation_id).join(', ')+' became startable as a direct result of this correction.')
+      : 'No item became startable from this correction alone — the record still has to be filed and the tehsil status confirmed. The engine reports what actually moved, not what we would like to have moved.'}</div>`);
+  }
+  if(log&&log.length){
+    parts.push(`<div class="dlog"><b>Remembered on disk — ${log.length} correction(s) survive a reload:</b>
+      ${log.map(e=>`<div>${esc((e.diff&&e.diff.summary)||((e.correction||{}).field_name+' corrected'))}</div>`).join('')}</div>`);
+  }
+  $('membody').innerHTML=parts.join('');
+  $('memsec').classList.toggle('show',parts.length>0);
+}
+const chip=(text,n,cls)=>`<span class="dchip ${n?(cls||'on'):''}">${esc(text)}</span>`;
+
+/* a mistyped correction target gets the menu, not a raw error */
+function renderTargets(err){
+  const d=(err&&err.detail)||{};
+  const list=d.available_targets||[];
+  if(!list.length){$('targets').innerHTML=`<div class="targets">${esc((d&&d.error)||JSON.stringify(err))}</div>`;return;}
+  $('targets').innerHTML=`<div class="targets"><b>✋ ${esc(d.error||'no such reading')}</b>
+    <div style="color:var(--mut);margin:3px 0 5px">Refused rather than recorded as a silent no-op. Correctable readings — click one:</div>
+    ${list.map(t=>`<div class="t" onclick="pickTarget('${esc(t.doc_id)}','${esc(t.field_name)}','${esc(t.current_value||'')}')">
+      <code>${esc(t.doc_id)}</code> · ${esc(t.field_name)} = “${esc(t.current_value)}” <span style="color:var(--mut)">(${esc(t.obligation_id)}, ${esc(t.status)})</span>
+    </div>`).join('')}</div>`;
+}
+function pickTarget(doc,field,val){
+  $('cdoc').value=doc; $('cfield').value=field; $('cnew').value=val;
+  $('cnew').focus(); say('target selected: '+doc+' / '+field);
+}
+
+/* ---------------- upload: drag-drop, thumbnails, per-file state ---------------- */
+const drop=$('drop'), fileInput=$('files');
+drop.addEventListener('click',()=>fileInput.click());
+['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add('hot')}));
+['dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove('hot')}));
+drop.addEventListener('drop',e=>handleFiles(e.dataTransfer.files));
+fileInput.addEventListener('change',e=>handleFiles(e.target.files));
+
+function handleFiles(fileList){
+  const files=[...fileList]; if(!files.length)return;
+  $('thumbs').innerHTML='';
+  files.forEach((f,idx)=>{
+    const t=document.createElement('div'); t.className='thumb'; t.id='th-'+idx;
+    const label=f.name.length>10?f.name.slice(0,9)+'…':f.name;
+    const url=f.type.startsWith('image/')?URL.createObjectURL(f):'';
+    t.innerHTML=`${url?`<img src="${esc(url)}">`:`<div class="ph">📄</div>`}
+      <div class="stt proc"><span class="spin"></span>reading</div>
+      <div title="${esc(f.name)}">${esc(label)}</div>`;
+    $('thumbs').appendChild(t);
+  });
+  uploadDocs(files);
+}
+async function uploadDocs(files){
+  const fd=new FormData(); files.forEach(f=>fd.append('files',f));
+  let r;
+  try{ r=await fetch('/api/case',{method:'POST',body:fd}); }
+  catch(err){ setThumbs('wait','offline'); say('upload failed: '+err); return; }
+  if(r.status===501){
+    setThumbs('wait','awaiting pipeline');
+    say('extraction pipeline not merged yet (501) — showing the demo case instead');
+    loadFixture(); return;
+  }
+  if(!r.ok){ setThumbs('wait','error '+r.status); say('upload error '+r.status); return; }
+  setThumbs('ok','read');
+  render(await r.json(),{cause:'load'}); say('stack processed → plan built');
+}
+function setThumbs(cls,text){
+  document.querySelectorAll('#thumbs .stt').forEach(s=>{s.className='stt '+cls;s.innerHTML=esc(text);});
+}
+
+listCases();
 </script>
 </body>
 </html>
