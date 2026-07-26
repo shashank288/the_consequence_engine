@@ -19,6 +19,7 @@ from .case_store import (CorrectionTargetNotFound, apply_correction, case_meta,
                          correction_targets, list_cases, load_case, log_correction,
                          reset_case, save_case)
 from .contracts import Case
+from .register import build_plan_with_register
 from .sequencer.core import build_plan
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -37,7 +38,7 @@ def create_from_fixture(name: str):
         raise HTTPException(404, f"fixture {name} not found")
     case = Case.model_validate(json.loads(path.read_text(encoding="utf-8")))
     case.id = f"{case.id}-{uuid.uuid4().hex[:6]}"
-    case.plan = build_plan(case)
+    case.plan = build_plan_with_register(case)
     save_case(case)
     return case.model_dump()
 
