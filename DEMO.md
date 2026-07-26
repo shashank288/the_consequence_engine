@@ -33,7 +33,19 @@ You should see a dark page. At the **top right** there are three things:
 
 ---
 
-## THE RECORDING — 5 steps, ~2 minutes
+## THE RECORDING — 3 minutes total
+
+| Time | Section | Clicking? |
+|---|---|---|
+| — | **Step 0** · start the upload | yes, then walk away from it |
+| 0:00–0:30 | **Intro** · what this is and why | no |
+| 0:30–1:00 | **Step 1** · how it works today | no |
+| 1:00–1:20 | **Step 2** · load the case | yes |
+| 1:20–1:45 | **Step 3** · why it's blocked | point only |
+| 1:45–2:10 | **Step 4** · correct, then unblock | yes |
+| 2:10–2:50 | **Step 5** · the live page | scroll + point |
+| 2:50–3:00 | **Close** | no |
+
 
 ### STEP 0 — start the upload FIRST (it takes 72 seconds)
 
@@ -45,17 +57,39 @@ to it at Step 5. **Do not sit and watch it.**
 
 ---
 
-### STEP 1 — the problem *(~25 seconds, nothing to click)*
+### INTRO — 0:00–0:30 · what this is and why it exists *(nothing to click)*
+
+Read this at a normal pace. It is ~85 words and lands at about 30 seconds.
+
+> "This is **The Consequence Engine**.
+>
+> You photograph a pile of official papers, and it gives you back **one thing to do
+> next** — in the right order, with the reason quoted from your own documents. And
+> when it can't read something clearly, it refuses to guess and hands it to a person.
+>
+> I built it because in India, the paperwork after a death doesn't fail from being
+> unreadable. It fails from being **out of order** and from **small mismatches nobody
+> catches** — and each failure costs a family another wasted trip."
+
+**If you want the fuller 60-second version**, add this before the last paragraph:
+
+> "Every tool in this space does the same thing: it reads one document and explains
+> it. That was never the hard part. The hard part is that five documents from five
+> offices contradict each other, and no single one of them tells you the order."
+
+---
+
+### STEP 1 — how it works today *(0:30–1:00, nothing to click)*
 
 > "When someone in an Indian family dies and leaves land behind, the family has to get
 > the land record changed into their name. It's called a mutation.
 >
-> The problem isn't reading the papers. It's that the papers contradict each other. A
-> handwritten village register from decades ago spells a name one way, the person's ID
-> spells it another way, and one office won't move until a different office has
-> finished its step — and nobody tells you which order to do them in.
+> A handwritten village register from decades ago spells a name one way, the person's
+> ID spells it another way, and one office won't move until a different office has
+> finished its step — but nobody tells you which order to do them in.
 >
-> So people take a day off work, stand in the wrong queue, and get sent home."
+> So today, a clerk works that out from memory. People take a day off work, stand in
+> the wrong queue, and get sent home."
 
 ---
 
