@@ -53,8 +53,63 @@ gracefully until feat/extraction lands (it already does — keep that).
 > A first-time viewer, given only the screen, can say out loud which item to do
 > first and why the second item cannot start yet — without the presenter explaining.
 
+---
+
+# ADDENDUM (14:10) — API has grown since this brief was written
+
+`feat/sequencer` and `feat/case-memory` are **merged into main**. `git merge main`
+first. 34 tests are green. New material you should render:
+
+## New/changed endpoints
+
+| Method | Path | What's new |
+|---|---|---|
+| GET | `/api/cases` | **new** — list rows: `id, created, updated, item_count, next_single_action, refusal_count, correction_count` |
+| POST | `/api/case/{id}/reset` | **new** — back to as-loaded state. **Wire this to a Reset button; M5 needs it for repeated demo runs.** |
+| GET | `/api/case/{id}` | now also returns `created`, `updated`, `correction_log[]` |
+| POST | `/api/case/{id}/correct` | now also returns `last_correction` and a rich **`diff`** |
+
+## The `diff` object is your Memory evidence — render it
+
+`diff.summary` is **one printable sentence, already written for the screen**. Print
+it verbatim. Example:
+
+> `owner_name on record_page_1947: 'Sushila D.' → 'SUSHILA DEVI' — cleared the O1↔O2 cosmetic mismatch on owner_name. Next single action unchanged`
+
+Under it, list `diff.obligations[].changes`. Also useful: `diff.mismatches_cleared`,
+`diff.refusals_cleared`, `diff.edges_removed`, `diff.propagated_to`.
+
+**Honest detail that matters:** correcting the name does **not** unblock O2 — that
+needs the mock status lookup. The demo beat is two steps: *correct → mismatch clears
+and propagation is listed*, **then** *mark-done → re-sequences*. Don't design a UI
+that implies the correction alone unblocked it.
+
+A bad correction target returns **404** with an `available_targets[]` menu — show
+that menu instead of a raw error toast.
+
+## Sequencer behaviour you must not break
+
+- `next_single_action` is **never null** now. When nothing can be started it carries
+  an honest sentence naming the missing keys. **Render that sentence in the
+  DO-THIS-FIRST banner** — do not treat it as an error or blank the banner.
+- Dependency cycles are broken deterministically; the waived edge is still emitted
+  as a `BlockingEdge`. So an item can be `actionable` *and* appear in `plan.edges`.
+  Don't assume actionable ⇒ no edges.
+
+## Priority order given the clock (~1h of useful build left)
+
+1. **Blocking chain visible, quoted reason inline on the card** ← Creativity, do first
+2. DO-THIS-FIRST banner unmissable (handle the honest-sentence case)
+3. Refusal panel: show `source.crop_path` as `<img>` when present, honest copy
+4. `diff.summary` after a correction
+5. Reset button → `POST /api/case/{id}/reset`
+
+Anything below 5 is parking lot. Do not start a redesign.
+
 ## Verify
 ```bash
+py -3.12 -m pytest -q                          # 34 must stay green
 py -3.12 -m uvicorn src.app:app --port 8000
 ```
-Merge after `feat/register`.
+Merge after `feat/register` (or before it if register is running late — coordinate
+with main).
