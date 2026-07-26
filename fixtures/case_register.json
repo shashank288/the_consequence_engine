@@ -1,0 +1,408 @@
+{
+  "id": "register-register_page",
+  "drafts": [
+    {
+      "id": "R1",
+      "doc_id": "register_page",
+      "doc_type": "mutation_register_page",
+      "asked_what": "File record-correction application at the tehsil so the register entry matches the heir's ID",
+      "asked_by": "Tehsil office",
+      "due": null,
+      "amount": null,
+      "needs": [],
+      "provides": [
+        "record_name_matches_id"
+      ],
+      "identity_fields": [
+        {
+          "name": "survey_no",
+          "value": "SN-142/2",
+          "confidence": 0.92,
+          "status": "read",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "SN-142/2",
+            "bbox": [
+              0.13794838916493027,
+              0.14561325316402474,
+              0.2835497141635946,
+              0.1789311693226254
+            ],
+            "crop_path": null
+          }
+        },
+        {
+          "name": "owner_name",
+          "value": "रामय्या स.",
+          "confidence": 0.88,
+          "status": "read",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "रामय्या स.",
+            "bbox": [
+              0.28186034086659184,
+              0.13954168944203846,
+              0.49388256665063834,
+              0.1747769415128453
+            ],
+            "crop_path": null
+          }
+        },
+        {
+          "name": "area",
+          "value": "२ एकड़ १३ गुंठा",
+          "confidence": 0.87,
+          "status": "read",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "२ एकड़ १३ गुंठा",
+            "bbox": [
+              0.6693155954479885,
+              0.12995500988100744,
+              0.8259870705775498,
+              0.16359248202497584
+            ],
+            "crop_path": null
+          }
+        },
+        {
+          "name": "survey_no@SN-143",
+          "value": "SN-143",
+          "confidence": 0.94,
+          "status": "read",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "SN-143",
+            "bbox": [
+              0.1412759426287235,
+              0.20305688172988348,
+              0.2868772676273878,
+              0.23637479788848414
+            ],
+            "crop_path": null
+          }
+        },
+        {
+          "name": "owner_name@SN-143",
+          "value": "सुशीला देवी",
+          "confidence": 0.79,
+          "status": "refused",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "सुशीला देवी — REFUSED (overwritten): the entry is struck through and rewritten — two competing values, and the page does not say which is current — measured over 39% of the writing; refused despite a read confidence of 0.79, because the page itself does not support it",
+            "bbox": [
+              0.2851878943303851,
+              0.19698531800789718,
+              0.49721012011443166,
+              0.23222057007870403
+            ],
+            "crop_path": "crops/register_page-owner_name_SN-143-769437b2.png"
+          }
+        },
+        {
+          "name": "area@SN-143",
+          "value": "१ एकड़ ०५ गुंठा",
+          "confidence": 0.91,
+          "status": "refused",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "१ एकड़ ०५ गुंठा — REFUSED (occluded_by_seal): an office seal is stamped across this cell — measured over 34% of the writing; refused despite a read confidence of 0.91, because the page itself does not support it",
+            "bbox": [
+              0.6726431489117818,
+              0.1873986384468662,
+              0.8293146240413432,
+              0.22103611059083453
+            ],
+            "crop_path": "crops/register_page-area_SN-143-c9e45fba.png"
+          }
+        },
+        {
+          "name": "survey_no@SN-144/1",
+          "value": "SN-144/1",
+          "confidence": 0.9,
+          "status": "read",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "SN-144/1",
+            "bbox": [
+              0.14460349609251674,
+              0.26050051029574217,
+              0.29020482109118106,
+              0.2938184264543429
+            ],
+            "crop_path": null
+          }
+        },
+        {
+          "name": "owner_name@SN-144/1",
+          "value": "लक्ष्मम्मा",
+          "confidence": 0.86,
+          "status": "read",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "लक्ष्मम्मा",
+            "bbox": [
+              0.2885154477941783,
+              0.25442894657375587,
+              0.5005376735782249,
+              0.28966419864456283
+            ],
+            "crop_path": null
+          }
+        },
+        {
+          "name": "area@SN-144/1",
+          "value": "३ एकड़ ०० गुंठा",
+          "confidence": 0.91,
+          "status": "refused",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "३ एकड़ ०० गुंठा — REFUSED (occluded_by_seal): an office seal is stamped across this cell — measured over 15% of the writing; refused despite a read confidence of 0.91, because the page itself does not support it",
+            "bbox": [
+              0.675970702375575,
+              0.24484226701272488,
+              0.8326421775051364,
+              0.27847973915669333
+            ],
+            "crop_path": "crops/register_page-area_SN-144_1-c4769686.png"
+          }
+        },
+        {
+          "name": "survey_no@SN-145",
+          "value": "SN-145",
+          "confidence": 0.93,
+          "status": "read",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "SN-145",
+            "bbox": [
+              0.14793104955631,
+              0.31794413886160094,
+              0.29353237455497433,
+              0.35126205502020164
+            ],
+            "crop_path": null
+          }
+        },
+        {
+          "name": "owner_name@SN-145",
+          "value": "गोविंद राव",
+          "confidence": 0.9,
+          "status": "read",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "गोविंद राव",
+            "bbox": [
+              0.2918430012579716,
+              0.31187257513961464,
+              0.5038652270420181,
+              0.3471078272104215
+            ],
+            "crop_path": null
+          }
+        },
+        {
+          "name": "area@SN-145",
+          "value": "०२ एकड़ ३० गुंठा",
+          "confidence": 0.88,
+          "status": "refused",
+          "source": {
+            "doc_id": "register_page",
+            "page": 1,
+            "quote": "०२ एकड़ ३० गुंठा — REFUSED (occluded_by_seal): an office seal is stamped across this cell — measured over 12% of the writing; refused despite a read confidence of 0.88, because the page itself does not support it",
+            "bbox": [
+              0.6792982558393682,
+              0.3022858955785836,
+              0.8359697309689296,
+              0.335923367722552
+            ],
+            "crop_path": "crops/register_page-area_SN-145-7d386aca.png"
+          }
+        }
+      ],
+      "unknown": false,
+      "raw_excerpt": "Handwritten record-of-rights page (4 entry rows read)."
+    }
+  ],
+  "provided_facts": [],
+  "done_keys": [],
+  "corrections": [],
+  "plan": {
+    "case_id": "register-register_page",
+    "items": [
+      {
+        "obligation_id": "R1",
+        "state": "actionable",
+        "order": 1,
+        "duplicate_of": null,
+        "next_action": "File record-correction application at the tehsil so the register entry matches the heir's ID",
+        "needs_docs": []
+      }
+    ],
+    "edges": [],
+    "mismatches": [
+      {
+        "field_name": "owner_name",
+        "readings": [
+          {
+            "name": "owner_name",
+            "value": "रामय्या स.",
+            "confidence": 0.88,
+            "status": "read",
+            "source": {
+              "doc_id": "register_page",
+              "page": 1,
+              "quote": "रामय्या स.",
+              "bbox": [
+                0.28186034086659184,
+                0.13954168944203846,
+                0.49388256665063834,
+                0.1747769415128453
+              ],
+              "crop_path": null
+            }
+          },
+          {
+            "name": "owner_name",
+            "value": "Ramaiah S.",
+            "confidence": 1.0,
+            "status": "read",
+            "source": {
+              "doc_id": "prior_record:SN-142/2",
+              "page": 1,
+              "quote": "last accepted entry for SN-142/2 (1998): Ramaiah S.",
+              "bbox": null,
+              "crop_path": null
+            }
+          }
+        ],
+        "classification": "unknown",
+        "reason": "Plot SN-142/2: the page reads 'रामय्या स.', the last accepted entry (1998) reads 'Ramaiah S.' — readings are in different scripts and their consonant skeletons differ ('rmyy s' vs 'rm s') — cannot confirm they are the same name; routed for human check"
+      },
+      {
+        "field_name": "owner_name",
+        "readings": [
+          {
+            "name": "owner_name@SN-143",
+            "value": "सुशीला देवी",
+            "confidence": 0.79,
+            "status": "refused",
+            "source": {
+              "doc_id": "register_page",
+              "page": 1,
+              "quote": "सुशीला देवी — REFUSED (overwritten): the entry is struck through and rewritten — two competing values, and the page does not say which is current — measured over 39% of the writing; refused despite a read confidence of 0.79, because the page itself does not support it",
+              "bbox": [
+                0.2851878943303851,
+                0.19698531800789718,
+                0.49721012011443166,
+                0.23222057007870403
+              ],
+              "crop_path": "crops/register_page-owner_name_SN-143-769437b2.png"
+            }
+          },
+          {
+            "name": "owner_name",
+            "value": "Sushila Devi",
+            "confidence": 1.0,
+            "status": "read",
+            "source": {
+              "doc_id": "prior_record:SN-143",
+              "page": 1,
+              "quote": "last accepted entry for SN-143 (2004): Sushila Devi",
+              "bbox": null,
+              "crop_path": null
+            }
+          }
+        ],
+        "classification": "blocking",
+        "reason": "Plot SN-143: this page's owner entry could not be read safely, and the records system still holds 'Sushila Devi' from 2004. Which name is current cannot be settled from this page — a human must confirm it before the mutation is filed. Evidence: सुशीला देवी — REFUSED (overwritten): the entry is struck through and rewritten — two competing values, and the page does not say which is current — measured over 39% of the writing; refused despite a read confidence of 0.79, because the page itself does not support it"
+      }
+    ],
+    "refusals": [
+      {
+        "name": "owner_name@SN-143",
+        "value": null,
+        "confidence": 0.79,
+        "status": "refused",
+        "source": {
+          "doc_id": "register_page",
+          "page": 1,
+          "quote": "सुशीला देवी — REFUSED (overwritten): the entry is struck through and rewritten — two competing values, and the page does not say which is current — measured over 39% of the writing; refused despite a read confidence of 0.79, because the page itself does not support it",
+          "bbox": [
+            0.2851878943303851,
+            0.19698531800789718,
+            0.49721012011443166,
+            0.23222057007870403
+          ],
+          "crop_path": "crops/register_page-owner_name_SN-143-769437b2.png"
+        }
+      },
+      {
+        "name": "area@SN-143",
+        "value": null,
+        "confidence": 0.91,
+        "status": "refused",
+        "source": {
+          "doc_id": "register_page",
+          "page": 1,
+          "quote": "१ एकड़ ०५ गुंठा — REFUSED (occluded_by_seal): an office seal is stamped across this cell — measured over 34% of the writing; refused despite a read confidence of 0.91, because the page itself does not support it",
+          "bbox": [
+            0.6726431489117818,
+            0.1873986384468662,
+            0.8293146240413432,
+            0.22103611059083453
+          ],
+          "crop_path": "crops/register_page-area_SN-143-c9e45fba.png"
+        }
+      },
+      {
+        "name": "area@SN-144/1",
+        "value": null,
+        "confidence": 0.91,
+        "status": "refused",
+        "source": {
+          "doc_id": "register_page",
+          "page": 1,
+          "quote": "३ एकड़ ०० गुंठा — REFUSED (occluded_by_seal): an office seal is stamped across this cell — measured over 15% of the writing; refused despite a read confidence of 0.91, because the page itself does not support it",
+          "bbox": [
+            0.675970702375575,
+            0.24484226701272488,
+            0.8326421775051364,
+            0.27847973915669333
+          ],
+          "crop_path": "crops/register_page-area_SN-144_1-c4769686.png"
+        }
+      },
+      {
+        "name": "area@SN-145",
+        "value": null,
+        "confidence": 0.88,
+        "status": "refused",
+        "source": {
+          "doc_id": "register_page",
+          "page": 1,
+          "quote": "०२ एकड़ ३० गुंठा — REFUSED (occluded_by_seal): an office seal is stamped across this cell — measured over 12% of the writing; refused despite a read confidence of 0.88, because the page itself does not support it",
+          "bbox": [
+            0.6792982558393682,
+            0.3022858955785836,
+            0.8359697309689296,
+            0.335923367722552
+          ],
+          "crop_path": "crops/register_page-area_SN-145-7d386aca.png"
+        }
+      }
+    ],
+    "next_single_action": "File record-correction application at the tehsil so the register entry matches the heir's ID"
+  }
+}

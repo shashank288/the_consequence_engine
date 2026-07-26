@@ -14,7 +14,7 @@ Pure logic — no network, no I/O. Persistence lives in store.py.
 from __future__ import annotations
 
 from ..contracts import Case, Correction, FieldReading, ObligationDraft, Plan
-from ..sequencer.core import build_plan
+from ..register import build_plan_with_register as build_plan
 
 
 class CorrectionTargetNotFound(LookupError):

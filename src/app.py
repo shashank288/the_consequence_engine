@@ -87,7 +87,9 @@ def mark_done(case_id: str, key: str):
         raise HTTPException(404, "no such case")
     if key not in case.done_keys:
         case.done_keys.append(key)
-    case.plan = build_plan(case)
+    # register-aware: keeps page-evidence refusals and prior-record contradictions
+    # in the plan after a status lookup. No-op for cases with no register page.
+    case.plan = build_plan_with_register(case)
     save_case(case)
     return case.model_dump()
 

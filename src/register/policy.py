@@ -170,6 +170,13 @@ def apply_register_policy(drafts, pages: dict[str, str] | None = None,
             if f is None or base_name(f.name) not in REGISTER_FIELDS:
                 continue
 
+            # A human who looked at the crop and typed the value outranks the
+            # pixels. case_store.apply_correction sets exactly (read, 1.0) to mean
+            # human-confirmed; without this, re-running the policy after a
+            # correction would re-refuse the field the human just resolved.
+            if f.status == "read" and f.confidence >= 1.0:
+                continue
+
             hinted = hint_reason(f)
             blocking = (audit.obstructions(f.source.bbox)
                         if audit and f.source and f.source.bbox else [])
